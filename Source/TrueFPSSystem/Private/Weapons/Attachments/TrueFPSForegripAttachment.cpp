@@ -24,7 +24,13 @@ ATrueFPSForegripAttachment::ATrueFPSForegripAttachment()
 
 void ATrueFPSForegripAttachment::OnRemoved()
 {
-	Super::OnRemoved();
+	if(!OwningWeapon) return;
+
+	// Remove hand offset transform and remove hand cached pose
+	OwningWeapon->OffHandAdditiveTransform = FTransform::Identity;
+	if(bCachePose && bRemoveCache)
+		if(const ACharacter* Character = OwningWeapon->GetPawnOwner())
+			UTrueFPSFunctionLibrary::RemoveCachedPoseSnapshot(Character->GetMesh()->GetAnimInstance(), CachedPoseName);
 }
 
 void ATrueFPSForegripAttachment::SetHandPlacement() const

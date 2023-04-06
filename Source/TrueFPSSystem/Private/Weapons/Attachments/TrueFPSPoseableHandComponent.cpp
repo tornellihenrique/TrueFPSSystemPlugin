@@ -135,7 +135,7 @@ void UTrueFPSPoseableHandComponent::OnComponentDestroyed(bool bDestroyingHierarc
 
 void UTrueFPSPoseableHandComponent::SetMeshPose()
 {
-	if (CachedPoseSnapshot.IsValid())
+	if(CachedPoseSnapshot.IsValid())
 	{
 		CachedPoseSnapshot->bIsValid = false;
 		CachedPoseSnapshot->BoneNames.Empty();
@@ -143,34 +143,31 @@ void UTrueFPSPoseableHandComponent::SetMeshPose()
 		CachedPoseSnapshot->SkeletalMeshName = NAME_None;
 	}
 	
-	if (!MeshPose || !PoseableMeshComp || !PoseableMeshComp->SkeletalMesh.Get()) return;
+	if(!MeshPose || !PoseableMeshComp || !PoseableMeshComp->SkeletalMesh.Get()) return;
 	
 	TArray<FName> PoseMeshBoneNames;
 	PoseableMeshComp->GetBoneNames(PoseMeshBoneNames);
-	if (PoseMeshBoneNames.IsEmpty()) return;
+	if(PoseMeshBoneNames.IsEmpty()) return;
 
-	for (int32 i = 0; i < PoseMeshBoneNames.Num(); i++)
+	for(int32 i = 0; i < PoseMeshBoneNames.Num(); i++)
 	{
 		// Set laterality bone names
 		FName RightBoneName;
 		FName LeftBoneName;
 		const FString& PoseBoneString = PoseMeshBoneNames[i].ToString();
-		if (PoseBoneString.RightChop(PoseBoneString.GetCharArray().Num() - RightHandSuffix.GetCharArray().Num()) == RightHandSuffix)
+		if(PoseBoneString.RightChop(PoseBoneString.GetCharArray().Num() - RightHandSuffix.GetCharArray().Num()) == RightHandSuffix)
 		{
 			RightBoneName = PoseMeshBoneNames[i];
 			LeftBoneName = FName(PoseBoneString.LeftChop(RightHandSuffix.GetCharArray().Num() - 1) + LeftHandSuffix);
 		}
-		else if (PoseBoneString.RightChop(PoseBoneString.GetCharArray().Num() - LeftHandSuffix.GetCharArray().Num()) == LeftHandSuffix)
+		else if(PoseBoneString.RightChop(PoseBoneString.GetCharArray().Num() - LeftHandSuffix.GetCharArray().Num()) == LeftHandSuffix)
 		{
 			LeftBoneName = PoseMeshBoneNames[i];
 			RightBoneName = FName(PoseBoneString.LeftChop(LeftHandSuffix.GetCharArray().Num() - 1) + RightHandSuffix);
 		}
 
 		const int32 MeshPoseBoneIndex = MeshPose->GetSkeleton()->GetReferenceSkeleton().FindBoneIndex(ExtractPoseLaterality == ELaterality::Right ? RightBoneName : LeftBoneName);
-		if (MeshPoseBoneIndex == INDEX_NONE) continue;
-
-		if (!MeshPose->GetDataModel()) continue;
-		if (!MeshPose->GetDataModel()->IsValidBoneTrackIndex(MeshPoseBoneIndex)) continue;;
+		if(MeshPoseBoneIndex == INDEX_NONE) continue;
 
 		FTransform OutBoneTransform;
 		MeshPose->GetBoneTransform(OutBoneTransform, MeshPoseBoneIndex, Time, true);
@@ -180,21 +177,17 @@ void UTrueFPSPoseableHandComponent::SetMeshPose()
 		FTransform OpposingBoneTransform(MeshBoneTransform.GetLocation());
 		OpposingBoneTransform.SetRotation(OutBoneTransform.GetRotation());
 		OpposingBoneTransform.SetScale3D(OutBoneTransform.GetScale3D());
-
-		UE_LOG(LogTemp, Warning, TEXT("Applying Transform from %s to %s for bone %s"), *MeshBoneTransform.ToString(), *OutBoneTransform.ToString(), *LeftBoneName.ToString());
 		
-		if (i != 0 || bPoseAffectsRoot)
-		{
+		if(i != 0 || bPoseAffectsRoot)
 			MeshBoneTransform = ExtractPoseLaterality == VisualizerLaterality ? OutBoneTransform : OpposingBoneTransform;
-		}
 		
 		//DefObj->CachedPoseSnapshot.BoneNames.Add(HandToModify == ELaterality::Right ? RightBoneName : LeftBoneName);
 		//DefObj->CachedPoseSnapshot.LocalTransforms.Add(HandToModify == ExtractPoseLaterality ? OutBoneTransform : OpposingBoneTransform);
 		
-		if (bCachePose && TargetSkeleton && CachedPoseSnapshot.IsValid())
+		if(bCachePose && TargetSkeleton && CachedPoseSnapshot.IsValid())
 		{	// Set bones to modify based-on the hand(s) to modify
 			std::initializer_list<FName> ModifyBoneNames;
-			switch (HandToModify)
+			switch(HandToModify)
 			{
 			case ELateralityMod::Both:
 				ModifyBoneNames = { RightBoneName, LeftBoneName };
@@ -206,11 +199,11 @@ void UTrueFPSPoseableHandComponent::SetMeshPose()
 				ModifyBoneNames = { LeftBoneName };
 			}
 
-			for (const FName& ModifyBoneName : ModifyBoneNames)
+			for(const FName& ModifyBoneName : ModifyBoneNames)
 			{
 				const FReferenceSkeleton& TargetRefSkel = TargetSkeleton->GetReferenceSkeleton();
 				const int32 TargetBoneIndex = TargetRefSkel.FindBoneIndex(ModifyBoneName);
-				if (TargetBoneIndex == INDEX_NONE) continue;
+				if(TargetBoneIndex == INDEX_NONE) continue;
 				
 				const FTransform MeshPoseRefTransform = MeshPose->GetSkeleton()->GetReferenceSkeleton().GetRefBonePose()[MeshPoseBoneIndex];
 				const FTransform TargetPoseRefTransform = TargetRefSkel.GetRefBonePose()[TargetBoneIndex];
@@ -222,16 +215,15 @@ void UTrueFPSPoseableHandComponent::SetMeshPose()
 		}
 	}
 
-	if (CachedPoseSnapshot.IsValid())
+	if(CachedPoseSnapshot.IsValid())
 	{
 		CachedPoseSnapshot->SkeletalMeshName = MeshPose->GetSkeleton()->GetFName();
 		CachedPoseSnapshot->bIsValid = true;
 	}
 	
-	if (CachedPoseSnapshot.IsValid())
-		for (int32 i = 0; i < CachedPoseSnapshot->BoneNames.Num(); i++)
+	if(CachedPoseSnapshot.IsValid())
+		for(int32 i = 0; i < CachedPoseSnapshot->BoneNames.Num(); i++)
 			UE_LOG(LogTemp, Warning, TEXT("CachedPoseSnapshot BoneName == %s. Rotation == %s"), *CachedPoseSnapshot->BoneNames[i].ToString(), *CachedPoseSnapshot->LocalTransforms[i].Rotator().ToString());
-
 	// Skip root index
 	/*for(int32 i = 0; i < PoseMeshBoneNames.Num(); i++)
 	{
@@ -250,11 +242,9 @@ void UTrueFPSPoseableHandComponent::SetMeshPose()
 		
 		FTransform OutPoseTransform = FTransform::Identity;
 		MeshPose->GetBoneTransform(OutPoseTransform, PoseBoneIndex, Time, true);
-
 		// Set visualization pose
 		if(i != 0 || bPoseAffectsRoot)
 			PoseableMeshComp->BoneSpaceTransforms[i].SetRotation(OutPoseTransform.GetRotation());
-
 		// Set cached pose snapshot
 		DefObj->CachedPoseSnapshot.BoneNames.Add(bUseNewSuffixForBoneModification ? PoseBoneName : PoseMeshBoneNames[i]);
 		DefObj->CachedPoseSnapshot.LocalTransforms.Add(bUseNewSuffixForBoneModification ? PoseableMeshComp->BoneSpaceTransforms[i] : OutPoseTransform);

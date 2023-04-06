@@ -57,7 +57,7 @@ protected:
 	bool bShowVisualizationMesh = true;
 	
 	UPROPERTY(EditAnywhere, Category = "Visualization")
-	FTransform VisualizationTransform = FTransform(FRotator(10.f, -10.f, 90.f));
+	FTransform VisualizationTransform = FTransform(FRotator(90.f, 0.f, 90.f));
 
 	UPROPERTY(EditAnywhere, Meta = (DisplayName = "Mesh Animation Pose"), Category = "Visualization")
 	class UAnimSequence* MeshPose;
