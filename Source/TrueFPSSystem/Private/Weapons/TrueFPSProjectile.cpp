@@ -1,6 +1,6 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
-#include "TrueFPSProjectile.h"
+#include "Weapons/TrueFPSProjectile.h"
 
 #include "TrueFPSSystem.h"
 #include "Components/AudioComponent.h"

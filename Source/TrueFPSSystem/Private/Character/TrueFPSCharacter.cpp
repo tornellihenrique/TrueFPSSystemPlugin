@@ -5,7 +5,7 @@
 
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
-#include "TrueFPSAnimInstanceBase.h"
+#include "Character/Animation/TrueFPSAnimInstanceBase.h"
 #include "TrueFPSSystem.h"
 #include "Weapons/TrueFPSWeaponBase.h"
 #include "Camera/CameraComponent.h"
@@ -48,9 +48,9 @@ ATrueFPSCharacter::ATrueFPSCharacter(const FObjectInitializer& ObjectInitializer
 	GetCapsuleComponent()->SetCollisionResponseToChannel(COLLISION_WEAPON, ECR_Ignore);
 
 	// Create a CameraComponent	
-	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
-	Camera->SetupAttachment(GetMesh(), FName("head"));
-	Camera->bUsePawnControlRotation = true;
+	// Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
+	// Camera->SetupAttachment(GetMesh(), FName("head"));
+	// Camera->bUsePawnControlRotation = true;
 
 	AimingSpeedModifier = 0.5f;
 	bIsAiming = false;
@@ -691,6 +691,11 @@ bool ATrueFPSCharacter::IsAlive() const
 float ATrueFPSCharacter::GetLowHealthPercentage() const
 {
 	return LowHealthPercentage;
+}
+
+FVector ATrueFPSCharacter::GetFirstPersonCameraTarget_Implementation() const
+{
+	return GetMesh()->GetSocketLocation(FName("head"));
 }
 
 void ATrueFPSCharacter::ChangeLeanValue(float NewLeanValue)

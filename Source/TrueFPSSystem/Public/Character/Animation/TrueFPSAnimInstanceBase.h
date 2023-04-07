@@ -81,10 +81,6 @@ public:
 	UPROPERTY(BlueprintReadWrite, Category = "Anim")
 	class USkeletalMeshComponent* Mesh;
 
-	// The player's camera component
-	UPROPERTY(BlueprintReadWrite, Category = "Anim")
-	class UCameraComponent* Camera;
-
 	UPROPERTY(BlueprintReadWrite, Category = "Anim")
 	EAnimState CurrentAnimState;
 

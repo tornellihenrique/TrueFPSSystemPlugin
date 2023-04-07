@@ -3,7 +3,7 @@
 
 #include "Weapons/TrueFPSWeaponProjectile.h"
 
-#include "TrueFPSProjectile.h"
+#include "Weapons/TrueFPSProjectile.h"
 #include "Kismet/GameplayStatics.h"
 
 ATrueFPSWeaponProjectile::ATrueFPSWeaponProjectile(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)

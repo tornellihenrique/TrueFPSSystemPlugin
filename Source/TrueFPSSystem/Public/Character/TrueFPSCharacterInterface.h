@@ -25,12 +25,6 @@ class TRUEFPSSYSTEM_API ITrueFPSCharacterInterface
 public:
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character")
-	bool IsRunning();
-
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character")
-	float GetCrouchValue() const;
-
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character")
 	bool IsFirstPerson();
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character")
@@ -45,8 +39,20 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Animations")
 	FTransform GetDomHandTransform();
 
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Animations")
+	bool IsRunning();
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Animations")
+	float GetCrouchValue() const;
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Animations")
+	FVector GetFirstPersonCameraTarget() const;
+
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Animations|Weapons")
 	float GetADSValue();
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Animations|Weapons")
+	float GetLeanValue();
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Animations|Weapons")
 	FName GetWeaponAttachPoint();
@@ -55,7 +61,7 @@ public:
 	// Weapons
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Weapons")
-	bool IsAiming();
+	bool IsAiming() const;
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Weapons")
 	bool HasCurrentWeapon();

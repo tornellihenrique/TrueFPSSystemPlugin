@@ -5,7 +5,7 @@
 
 #include "TrueFPSSystem.h"
 #include "GameFramework/Character.h"
-#include "TrueFPSCharacterInterface.h"
+#include "Character/TrueFPSCharacterInterface.h"
 #include "Effects/TrueFPSImpactEffect.h"
 #include "Engine/DamageEvents.h"
 #include "Kismet/GameplayStatics.h"

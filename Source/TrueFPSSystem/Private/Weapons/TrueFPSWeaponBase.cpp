@@ -4,7 +4,7 @@
 #include "Weapons/TrueFPSWeaponBase.h"
 
 #include "TrueFPSSystem.h"
-#include "TrueFPSCharacterInterface.h"
+#include "Character/TrueFPSCharacterInterface.h"
 #include "GameFramework/Character.h"
 #include "VisualizationMacros.h"
 #include "Components/AudioComponent.h"

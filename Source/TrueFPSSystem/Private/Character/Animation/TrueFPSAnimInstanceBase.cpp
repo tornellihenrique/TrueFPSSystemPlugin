@@ -1,10 +1,10 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "TrueFPSAnimInstanceBase.h"
+#include "Character/Animation/TrueFPSAnimInstanceBase.h"
 
 #include "KismetAnimationLibrary.h"
-#include "TrueFPSCharacterInterface.h"
+#include "Character/TrueFPSCharacterInterface.h"
 #include "Weapons/TrueFPSWeaponBase.h"
 #include "Camera/CameraComponent.h"
 #include "Curves/CurveVector.h"
@@ -74,11 +74,6 @@ void UTrueFPSAnimInstanceBase::PostUpdateAnimation(const float DeltaTime)
 void UTrueFPSAnimInstanceBase::OnCharacterInitialized()
 {
 	Mesh = Character->GetMesh();
-	Camera = Character->FindComponentByClass<UCameraComponent>();
-	CameraRelativeLocation = Camera->GetRelativeLocation();
-
-	const ACharacter* DefObj = Character->GetClass()->GetDefaultObject<ACharacter>();
-	CameraRelativeLocation = DefObj->FindComponentByClass<UCameraComponent>()->GetComponentLocation() - DefObj->GetMesh()->GetSocketLocation(FName("head"));
 }
 
 void UTrueFPSAnimInstanceBase::UpdateVariables(const float DeltaTime)
@@ -99,8 +94,7 @@ void UTrueFPSAnimInstanceBase::UpdateVariables(const float DeltaTime)
 			LastUpdatedRotationValues.Yaw * PlayerController->InputYawScale_DEPRECATED,
 			LastUpdatedRotationValues.Roll * PlayerController->InputRollScale_DEPRECATED);
 		
-		const FRotator DirectCameraRotation = Camera->GetComponentRotation();
-		const FRotator PreCalculatedCameraRot = DirectCameraRotation + AddRot;
+		const FRotator PreCalculatedCameraRot = Character->GetBaseAimRotation() + AddRot;
 
 		constexpr float ClampAngle = 89.9f;
 		CameraRotation = FRotator(FMath::ClampAngle(PreCalculatedCameraRot.Pitch, -ClampAngle, ClampAngle), PreCalculatedCameraRot.Yaw, PreCalculatedCameraRot.Roll);
@@ -109,7 +103,7 @@ void UTrueFPSAnimInstanceBase::UpdateVariables(const float DeltaTime)
 	{
 		// Clamp pitch to prevent weird yaw rotation glitch on simulated proxies
 		constexpr float ClampAngle = 89.9f;
-		FRotator ClampedBaseAimRotation = Character->GetViewRotation();
+		FRotator ClampedBaseAimRotation = Character->GetBaseAimRotation();
 		ClampedBaseAimRotation.Pitch = FMath::ClampAngle(ClampedBaseAimRotation.Pitch, -ClampAngle, ClampAngle);
 
 		// Interp camera rotation to prevent a hitchy look on non-local viewports
@@ -131,6 +125,10 @@ void UTrueFPSAnimInstanceBase::UpdateVariables(const float DeltaTime)
 	
 	// Used for mesh calculations
 	AimRotation = CameraRotation - Character->GetActorRotation();
+
+	// Applying Leaning manually because Character Roll Rotation is not replicated like Pitch Rotation
+	if (Character->Implements<UTrueFPSCharacterInterface>())
+		AimRotation = FRotator(AimRotation.Pitch, AimRotation.Yaw, ITrueFPSCharacterInterface::Execute_GetLeanValue(Character));
 	
 	/**
 	/* Locomotion Variables

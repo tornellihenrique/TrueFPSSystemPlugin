@@ -6,7 +6,7 @@
 #include "GameFramework/Character.h"
 #include "TrueFPSTypes.h"
 #include "InputActionValue.h"
-#include "TrueFPSCharacterInterface.h"
+#include "Character/TrueFPSCharacterInterface.h"
 #include "Components/TimelineComponent.h"
 #include "TrueFPSCharacter.generated.h"
 
@@ -25,9 +25,6 @@ class TRUEFPSSYSTEM_API ATrueFPSCharacter : public ACharacter, public ITrueFPSCh
 
 	UPROPERTY(VisibleDefaultsOnly, Category = Mesh)
 	USkeletalMeshComponent* ClientMesh;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	UCameraComponent* Camera;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	class UInputMappingContext* DefaultMappingContext;
@@ -99,7 +96,6 @@ public:
 	virtual void OnReplicationPausedChanged(bool bIsReplicationPaused) override;
 	
 	FORCEINLINE USkeletalMeshComponent* GetClientMesh() const { return ClientMesh; }
-	FORCEINLINE UCameraComponent* GetCamera() const { return Camera; }
 	
 protected:
 	
@@ -306,7 +302,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Game|Weapon")
 	bool IsPlayerAiming() const;
 
-	virtual bool IsAiming_Implementation() override { return IsPlayerAiming(); }
+	virtual bool IsAiming_Implementation() const override { return IsPlayerAiming(); }
 
 	/** get firing state */
 	UFUNCTION(BlueprintCallable, Category = "Game|Weapon")
@@ -344,6 +340,8 @@ public:
 	virtual FTransform GetDomHandTransform_Implementation() override { return GetMesh()->GetSocketTransform(bRightHanded ? RightHandSocket : LeftHandSocket); }
 
 	virtual float GetADSValue_Implementation() override { return ADSValue; }
+
+	virtual FVector GetFirstPersonCameraTarget_Implementation() const override;
 
 protected:
 
@@ -448,6 +446,8 @@ protected:
 public:
 	
 	virtual float GetCrouchValue_Implementation() const override { return CrouchValue; }
+
+	virtual float GetLeanValue_Implementation() override { return LeanValue; }
 
 protected:
 	/** Responsible for cleaning up bodies on clients. */
