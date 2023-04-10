@@ -48,6 +48,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Animations")
 	FVector GetFirstPersonCameraTarget() const;
 
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Animations")
+	FRotator GetFirstPersonCameraTargetRotation() const;
+
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Animations|Weapons")
 	float GetADSValue();
 

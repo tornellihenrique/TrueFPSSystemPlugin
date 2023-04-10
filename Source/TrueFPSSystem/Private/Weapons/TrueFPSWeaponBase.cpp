@@ -398,6 +398,13 @@ bool ATrueFPSWeaponBase::CanReload() const
 	return ((bCanReload == true) && (bGotAmmo == true) && (bStateOKToReload == true));	
 }
 
+bool ATrueFPSWeaponBase::CanAim() const
+{
+	bool bIsCloseToWall = IsCloseToWall();
+	
+	return (bIsCloseToWall == false);
+}
+
 EWeaponState::Type ATrueFPSWeaponBase::GetCurrentState() const
 {
 	return CurrentState;
@@ -949,6 +956,12 @@ void ATrueFPSWeaponBase::AttachMeshToPawn()
 			UseWeaponMesh->SetRelativeTransform(WeaponAnimProperties.PlacementTransform);
 			UseWeaponMesh->SetHiddenInGame( false );
 		}
+
+		TArray<ATrueFPSWeaponAttachmentBase*> CurrentAttachments;
+		GetAttachments(CurrentAttachments);
+		for (const auto& CurrentAttachment : CurrentAttachments)
+			if (CurrentAttachment)
+				CurrentAttachment->SetVisibility(true);
 	}
 }
 
@@ -959,6 +972,12 @@ void ATrueFPSWeaponBase::DetachMeshFromPawn()
 
 	Mesh3P->DetachFromComponent(FDetachmentTransformRules::KeepRelativeTransform);
 	Mesh3P->SetHiddenInGame(true);
+
+	TArray<ATrueFPSWeaponAttachmentBase*> CurrentAttachments;
+	GetAttachments(CurrentAttachments);
+	for (const auto& CurrentAttachment : CurrentAttachments)
+		if (CurrentAttachment)
+			CurrentAttachment->SetVisibility(false);
 }
 
 UAudioComponent* ATrueFPSWeaponBase::PlayWeaponSound(USoundCue* Sound)
@@ -1011,6 +1030,9 @@ void ATrueFPSWeaponBase::StopWeaponAnimation(const FWeaponAnim& Animation)
 
 FVector ATrueFPSWeaponBase::GetAdjustedAim() const
 {
+	// If it's close to wall, use muzzle's rotation
+	if (IsCloseToWall()) return GetMuzzleDirection();
+	
 	APlayerController* const PlayerController = GetInstigatorController<APlayerController>();
 	FVector FinalAim = FVector::ZeroVector;
 	// If we have a player controller use it for the aim
@@ -1093,7 +1115,9 @@ FHitResult ATrueFPSWeaponBase::WeaponTrace(const FVector& StartTrace, const FVec
 
 FTransform ATrueFPSWeaponBase::GetOffsetTransform() const
 {
-	return RecoilOffset * OffsetTransform;
+	const FTransform DefaultOffsetTransform = RecoilOffset * OffsetTransform;
+	
+	return UKismetMathLibrary::TLerp(DefaultOffsetTransform, DefaultOffsetTransform * WeaponAnimProperties.WallOffsetTransform, GetWallOffsetTransformAlpha());
 }
 
 FTransform ATrueFPSWeaponBase::GetDefaultSightsRelativeTransform() const
@@ -1141,6 +1165,29 @@ FTransform ATrueFPSWeaponBase::GetOrientationRelativeTransform(const float Aimin
 FTransform ATrueFPSWeaponBase::GetOrientationWorldTransform(const float AimingValue) const
 {
 	return GetOrientationRelativeTransform(AimingValue) * GetActorTransform();
+}
+
+float ATrueFPSWeaponBase::GetWallOffsetTransformAlpha() const
+{
+	if (!GetPawnOwner()) return 0.f;
+	if (!GetPawnOwner()->Implements<UTrueFPSCharacterInterface>()) return 0.f;
+	
+	FCollisionQueryParams TraceParams(SCENE_QUERY_STAT(GetWallOffsetTransformAlpha), false, this);
+	TraceParams.AddIgnoredActor(GetInstigator());
+	
+	const FVector StartTrace = ITrueFPSCharacterInterface::Execute_GetFirstPersonCameraTarget(GetPawnOwner());
+	const FVector EndTrace = StartTrace + GetPawnOwner()->GetBaseAimRotation().Vector() * WeaponAnimProperties.WallOffsetTransformMaxDistance;
+
+	FHitResult Hit(ForceInit);
+	if (GetWorld()->LineTraceSingleByChannel(Hit, StartTrace, EndTrace, ECC_Visibility, TraceParams))
+	{
+		const float WallMinDist = WeaponAnimProperties.WallOffsetTransformMinDistance;
+		const float WallMaxDist = WeaponAnimProperties.WallOffsetTransformMaxDistance;
+	
+		return 1.f - FMath::Clamp((Hit.Distance - WallMinDist) / (WallMaxDist - WallMinDist), 0.f, 1.f);
+	}
+
+	return 0.f;
 }
 
 #if WITH_EDITORONLY_DATA

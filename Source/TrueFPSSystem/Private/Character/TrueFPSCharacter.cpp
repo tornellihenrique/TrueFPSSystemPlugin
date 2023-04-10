@@ -137,6 +137,10 @@ void ATrueFPSCharacter::Tick(float DeltaSeconds)
 
 	// AimingTimeline tick handling
 	AimingTimeline.TickTimeline(DeltaSeconds);
+
+	// Stops aiming if gets close to a wall
+	if (IsLocallyControlled())
+		if (CurrentWeapon && CurrentWeapon->IsCloseToWall()) OnStopAiming();
 }
 
 void ATrueFPSCharacter::Destroyed()
@@ -451,6 +455,8 @@ void ATrueFPSCharacter::OnStopFire()
 
 void ATrueFPSCharacter::OnStartAiming()
 {
+	if (CurrentWeapon && !CurrentWeapon->CanAim()) return;
+	
 	if (IsPlayerRunning())
 	{
 		SetRunning(false, false);
@@ -698,6 +704,11 @@ FVector ATrueFPSCharacter::GetFirstPersonCameraTarget_Implementation() const
 	return GetMesh()->GetSocketLocation(FName("head"));
 }
 
+FRotator ATrueFPSCharacter::GetFirstPersonCameraTargetRotation_Implementation() const
+{
+	return GetControlRotation();
+}
+
 void ATrueFPSCharacter::ChangeLeanValue(float NewLeanValue)
 {
 	LeanValueTarget = NewLeanValue;
@@ -884,7 +895,7 @@ void ATrueFPSCharacter::PreReplication(IRepChangedPropertyTracker& ChangedProper
 	DOREPLIFETIME_ACTIVE_OVERRIDE(ThisClass, LastTakeHitInfo, GetWorld() && GetWorld()->GetTimeSeconds() < LastTakeHitTimeTimeout);
 
 	// Only replicate this property if it's whether fully filled or empty
-	DOREPLIFETIME_ACTIVE_OVERRIDE(ThisClass, ADSValue, ADSValue == 0.f || ADSValue == 1.f);
+	// DOREPLIFETIME_ACTIVE_OVERRIDE(ThisClass, ADSValue, ADSValue == 0.f || ADSValue == 1.f);
 }
 
 void ATrueFPSCharacter::OnDeath(float KillingDamage, FDamageEvent const& DamageEvent, APawn* PawnInstigator,

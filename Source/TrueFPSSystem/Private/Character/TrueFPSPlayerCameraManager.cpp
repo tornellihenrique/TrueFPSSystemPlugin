@@ -53,11 +53,12 @@ bool ATrueFPSPlayerCameraManager::CustomCameraBehavior(float DeltaTime, FVector&
 	if (!MyCharacter->Implements<UTrueFPSCharacterInterface>()) return false;
 
 	const FVector& FPTarget = ITrueFPSCharacterInterface::Execute_GetFirstPersonCameraTarget(MyCharacter);
+	const FRotator& FPTargetRotation = ITrueFPSCharacterInterface::Execute_GetFirstPersonCameraTargetRotation(MyCharacter);
 
 	// FOV changing
 	const float TargetFOV = ITrueFPSCharacterInterface::Execute_IsAiming(MyCharacter) ? TargetingFOV : NormalFOV;
 
-	FTransform TargetTransform(PCOwner->GetControlRotation(), FPTarget, FVector::OneVector);
+	FTransform TargetTransform(FPTargetRotation, FPTarget, FVector::OneVector);
 
 	Location = TargetTransform.GetLocation();
 	Rotation = TargetTransform.Rotator();

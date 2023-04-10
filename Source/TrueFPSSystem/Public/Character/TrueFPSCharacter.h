@@ -273,6 +273,7 @@ public:
 	// Reading data
 
 	/** get mesh component */
+	UFUNCTION(BlueprintPure)
 	USkeletalMeshComponent* GetPawnMesh() const;
 
 	/** get currently equipped weapon */
@@ -335,6 +336,8 @@ public:
 	/** returns percentage of health when low health effects should start */
 	float GetLowHealthPercentage() const;
 
+	/*	INTERFACE FUNCTIONS */
+
 	virtual FRotator GetLastUpdatedRotationValues_Implementation() override { return FRotator(CurrentPitchInputValue, CurrentYawInputValue, CurrentRollInputValue); }
 
 	virtual FTransform GetDomHandTransform_Implementation() override { return GetMesh()->GetSocketTransform(bRightHanded ? RightHandSocket : LeftHandSocket); }
@@ -342,6 +345,8 @@ public:
 	virtual float GetADSValue_Implementation() override { return ADSValue; }
 
 	virtual FVector GetFirstPersonCameraTarget_Implementation() const override;
+
+	virtual FRotator GetFirstPersonCameraTargetRotation_Implementation() const override;
 
 protected:
 
@@ -404,7 +409,7 @@ protected:
 
 	/** socket or bone name for attaching weapon mesh */
 	UPROPERTY(EditDefaultsOnly, Category = Pawn)
-	FName WeaponAttachPoint;
+	FName WeaponAttachPoint = FName("weapon_r");
 
 	/** right hand socket name */
 	UPROPERTY(EditDefaultsOnly, Category = Pawn)

@@ -119,6 +119,15 @@ struct FWeaponAnimProperties
 	FTransform PlacementTransform;
 
 	UPROPERTY(EditDefaultsOnly, Category=Animation)
+	FTransform WallOffsetTransform = FTransform(FRotator(100.f, 0.f, 0.f), FVector(-10.f, 0.f, 0.f));
+
+	UPROPERTY(EditDefaultsOnly, Category=Animation)
+	float WallOffsetTransformMaxDistance = 80.f;
+
+	UPROPERTY(EditDefaultsOnly, Category=Animation)
+	float WallOffsetTransformMinDistance = 30.f;
+
+	UPROPERTY(EditDefaultsOnly, Category=Animation)
 	float AimOffset;
 
 	UPROPERTY(EditDefaultsOnly, Category=Animation)
@@ -236,6 +245,9 @@ public:
 
 	/** check if weapon can be reloaded */
 	bool CanReload() const;
+
+	/** check if weapon can be reloaded */
+	bool CanAim() const;
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -359,6 +371,8 @@ public:
 	void GetAttachmentsOfClass(TArray<class ATrueFPSWeaponAttachmentBase*>& OutAttachments, const TSubclassOf<class ATrueFPSWeaponAttachmentBase>& Class) const;
 
 	void GetAttachmentPoints(TArray<class UTrueFPSWeaponAttachmentPoint*>& OutAttachmentPoints) const;
+	
+	FORCEINLINE bool IsCloseToWall() const { return GetWallOffsetTransformAlpha() > 0.f; }
 
 protected:
 
@@ -681,6 +695,8 @@ public:
 	FTransform GetOrientationWorldTransform(const float AimingValue = 0.f) const;
 
 	FWeaponAnimProperties GetAnimProperties() const { return WeaponAnimProperties; }
+
+	float GetWallOffsetTransformAlpha() const;
 
 	//////////////////////////////////////////////////////////////////////////
 	// Debug
