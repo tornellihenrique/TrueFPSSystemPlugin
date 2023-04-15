@@ -30,9 +30,6 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character")
 	class USkeletalMeshComponent* GetSpecificPawnMesh(bool WantFirstPerson) const;
 
-	//////////////////////////////////////////////////////////////////////////
-	// Animations
-
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Animations")
 	FRotator GetLastUpdatedRotationValues();
 
@@ -51,6 +48,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Animations")
 	FRotator GetFirstPersonCameraTargetRotation() const;
 
+	//////////////////////////////////////////////////////////////////////////
+	// Weapons
+
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Animations|Weapons")
 	float GetADSValue();
 
@@ -60,12 +60,6 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Animations|Weapons")
 	FName GetWeaponAttachPoint();
 
-	//////////////////////////////////////////////////////////////////////////
-	// Weapons
-
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Weapons")
-	bool IsAiming() const;
-
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Weapons")
 	bool HasCurrentWeapon();
 
@@ -73,9 +67,15 @@ public:
 	class ATrueFPSWeaponBase* GetCurrentWeapon();
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Weapons")
+	bool IsAiming() const;
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Weapons")
 	bool CanFire();
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Weapons")
 	bool CanReload();
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Weapons")
+	void ApplyRecoil(const FVector2D& RecoilAmount, const float RecoilSpeed, const float RecoilResetSpeed);
 	
 };

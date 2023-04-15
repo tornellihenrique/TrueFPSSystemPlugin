@@ -27,7 +27,7 @@ namespace EWeaponState
 	};
 }
 
-USTRUCT()
+USTRUCT(DisplayName = "Weapon")
 struct FWeaponData
 {
 	GENERATED_USTRUCT_BODY()
@@ -83,66 +83,66 @@ struct FWeaponAnim
 	GENERATED_USTRUCT_BODY()
 
 	/** animation played on pawn (1st person view) */
-	UPROPERTY(EditDefaultsOnly, Category=Animation)
+	UPROPERTY(EditDefaultsOnly, Category="Animation")
 	UAnimMontage* Pawn1P = nullptr;
 
 	/** animation played on pawn (3rd person view) */
-	UPROPERTY(EditDefaultsOnly, Category=Animation)
+	UPROPERTY(EditDefaultsOnly, Category="Animation")
 	UAnimMontage* Pawn3P = nullptr;
 
 	/** animation played on weapon (1st person view) */
-	UPROPERTY(EditDefaultsOnly, Category=Animation)
+	UPROPERTY(EditDefaultsOnly, Category="Animation")
 	UAnimMontage* Weapon1P = nullptr;
 
 	/** animation played on weapon (3rd person view) */
-	UPROPERTY(EditDefaultsOnly, Category=Animation)
+	UPROPERTY(EditDefaultsOnly, Category="Animation")
 	UAnimMontage* Weapon3P = nullptr;
 
 	FWeaponAnim() {}
 };
 
-USTRUCT()
+USTRUCT(DisplayName = "Weapon Animations")
 struct FWeaponAnimProperties
 {
 	GENERATED_USTRUCT_BODY()
 
-	UPROPERTY(EditDefaultsOnly, Category=Animation)
+	UPROPERTY(EditDefaultsOnly, Category="Animation")
 	float WeightScale = 1.f;
 
-	UPROPERTY(EditDefaultsOnly, Category=Animation)
+	UPROPERTY(EditDefaultsOnly, Category="Animation")
 	FTransform CustomOffsetTransform;
 
-	UPROPERTY(EditDefaultsOnly, Category=Animation)
+	UPROPERTY(EditDefaultsOnly, Category="Animation")
 	FTransform OriginRelativeTransform;
 
-	UPROPERTY(EditDefaultsOnly, Category=Animation)
+	UPROPERTY(EditDefaultsOnly, Category="Animation")
 	FTransform PlacementTransform;
 
-	UPROPERTY(EditDefaultsOnly, Category=Animation)
+	UPROPERTY(EditDefaultsOnly, Category="Animation")
 	FTransform WallOffsetTransform = FTransform(FRotator(100.f, 0.f, 0.f), FVector(-10.f, 0.f, 0.f));
 
-	UPROPERTY(EditDefaultsOnly, Category=Animation)
+	UPROPERTY(EditDefaultsOnly, Category="Animation")
 	float WallOffsetTransformMaxDistance = 80.f;
 
-	UPROPERTY(EditDefaultsOnly, Category=Animation)
+	UPROPERTY(EditDefaultsOnly, Category="Animation")
 	float WallOffsetTransformMinDistance = 30.f;
 
-	UPROPERTY(EditDefaultsOnly, Category=Animation)
+	UPROPERTY(EditDefaultsOnly, Category="Animation")
 	float AimOffset;
 
-	UPROPERTY(EditDefaultsOnly, Category=Animation)
+	UPROPERTY(EditDefaultsOnly, Category="Animation")
 	FName SightSocketName = FName("sights");
 
-	UPROPERTY(EditDefaultsOnly, Category=Animation)
+	UPROPERTY(EditDefaultsOnly, Category="Animation")
 	class UCurveFloat* AimingCurve;
 
-	UPROPERTY(EditDefaultsOnly, Category=Animation)
+	UPROPERTY(EditDefaultsOnly, Category="Animation")
 	FRecoilParams RecoilParams;
 
-	UPROPERTY(EditDefaultsOnly, Category=Animation)
+	UPROPERTY(EditDefaultsOnly, Category="Animation")
 	EAnimState AnimState = EAnimState::Default;
 
-	UPROPERTY(EditDefaultsOnly, Category=Animation)
+	UPROPERTY(EditDefaultsOnly, Category="Animation")
 	class UAnimSequence* AnimPose = nullptr;
 };
 
@@ -289,56 +289,60 @@ public:
 	bool IsFirstPerson() const;
 
 	/** icon displayed on the HUD when weapon is equipped as primary */
-	UPROPERTY(EditDefaultsOnly, Category=HUD)
+	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
 	FCanvasIcon PrimaryIcon;
 
 	/** icon displayed on the HUD when weapon is secondary */
-	UPROPERTY(EditDefaultsOnly, Category=HUD)
+	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
 	FCanvasIcon SecondaryIcon;
 
 	/** bullet icon used to draw current clip (left side) */
-	UPROPERTY(EditDefaultsOnly, Category=HUD)
+	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
 	FCanvasIcon PrimaryClipIcon;
 
 	/** bullet icon used to draw secondary clip (left side) */
-	UPROPERTY(EditDefaultsOnly, Category=HUD)
+	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
 	FCanvasIcon SecondaryClipIcon;
 
 	/** how many icons to draw per clip */
-	UPROPERTY(EditDefaultsOnly, Category=HUD)
+	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
 	float AmmoIconsCount;
 
 	/** defines spacing between primary ammo icons (left side) */
-	UPROPERTY(EditDefaultsOnly, Category=HUD)
+	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
 	int32 PrimaryClipIconOffset;
 
 	/** defines spacing between secondary ammo icons (left side) */
-	UPROPERTY(EditDefaultsOnly, Category=HUD)
+	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
 	int32 SecondaryClipIconOffset;
 
 	/** crosshair parts icons (left, top, right, bottom and center) */
-	UPROPERTY(EditDefaultsOnly, Category=HUD)
+	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
 	FCanvasIcon Crosshair[5];
 
 	/** crosshair parts icons when targeting (left, top, right, bottom and center) */
-	UPROPERTY(EditDefaultsOnly, Category=HUD)
+	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
 	FCanvasIcon AimingCrosshair[5];
 
 	/** only use red colored center part of aiming crosshair */
-	UPROPERTY(EditDefaultsOnly, Category=HUD)
+	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
 	bool UseLaserDot;
 
 	/** false = default crosshair */
-	UPROPERTY(EditDefaultsOnly, Category=HUD)
+	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
 	bool UseCustomCrosshair;
 
 	/** false = use custom one if set, otherwise default crosshair */
-	UPROPERTY(EditDefaultsOnly, Category=HUD)
+	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
 	bool UseCustomAimingCrosshair;
 
 	/** true - crosshair will not be shown unless aiming with the weapon */
-	UPROPERTY(EditDefaultsOnly, Category=HUD)
-	bool bHideCrosshairWhileNotAiming;
+	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
+	bool bHideCrosshairWhileNotAiming = false;
+
+	/** true - crosshair will not be shown unless aiming with the weapon */
+	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
+	bool bHideCrosshairWhileAiming = true;
 
 	/** Adjustment to handle frame rate affecting actual timer interval. */
 	UPROPERTY(Transient)
@@ -380,13 +384,13 @@ protected:
 	UPROPERTY(Transient, ReplicatedUsing=OnRep_MyPawn)
 	class ACharacter* MyPawn;
 
-	/** weapon data */
-	UPROPERTY(EditDefaultsOnly, Category=Config)
-	FWeaponData WeaponConfig;
-
 	/** weapon anim properties */
-	UPROPERTY(EditDefaultsOnly, Category=Config)
+	UPROPERTY(EditDefaultsOnly, Category="Config", meta = (DisplayPriority = "1"))
 	FWeaponAnimProperties WeaponAnimProperties;
+
+	/** weapon data */
+	UPROPERTY(EditDefaultsOnly, Category="Config")
+	FWeaponData WeaponConfig;
 
 private:
 	
@@ -405,11 +409,11 @@ protected:
 	UAudioComponent* FireAC;
 
 	/** name of bone/socket for muzzle in weapon mesh */
-	UPROPERTY(EditDefaultsOnly, Category=Effects)
+	UPROPERTY(EditDefaultsOnly, Category="Config|Effects")
 	FName MuzzleAttachPoint;
 
 	/** FX for muzzle flash */
-	UPROPERTY(EditDefaultsOnly, Category=Effects)
+	UPROPERTY(EditDefaultsOnly, Category="Config|Effects")
 	UParticleSystem* MuzzleFX;
 
 	/** spawned component for muzzle FX */
@@ -421,59 +425,72 @@ protected:
 	UParticleSystemComponent* MuzzlePSCSecondary;
 
 	/** camera shake on firing */
-	UPROPERTY(EditDefaultsOnly, Category=Effects)
+	UPROPERTY(EditDefaultsOnly, Category="Config|Effects")
 	TSubclassOf<UCameraShakeBase> FireCameraShake;
 
 	/** force feedback effect to play when the weapon is fired */
-	UPROPERTY(EditDefaultsOnly, Category=Effects)
+	UPROPERTY(EditDefaultsOnly, Category="Config|Effects")
 	UForceFeedbackEffect *FireForceFeedback;
 
+	/** The amount of recoil to apply. We choose a random point from 0-1 on the curve and use it to drive recoil.
+	This means designers get lots of control over the recoil pattern*/
+	UPROPERTY(EditDefaultsOnly, Category = "Config|Effects")
+	class UCurveVector* RecoilCurve;
+
+	// the speed at which the recoil bumps up per second
+	UPROPERTY(EditDefaultsOnly, Category = "Config|Effects")
+	float RecoilSpeed;
+
+	// the speed at which the recoil resets per second
+	UPROPERTY(EditDefaultsOnly, Category = "Config|Effects")
+	float RecoilResetSpeed;
+
 	/** single fire sound (bLoopedFireSound not set) */
-	UPROPERTY(EditDefaultsOnly, Category=Sound)
+	UPROPERTY(EditDefaultsOnly, Category="Config|Sound")
 	USoundCue* FireSound;
 
 	/** looped fire sound (bLoopedFireSound set) */
-	UPROPERTY(EditDefaultsOnly, Category=Sound)
+	UPROPERTY(EditDefaultsOnly, Category="Config|Sound")
 	USoundCue* FireLoopSound;
 
 	/** finished burst sound (bLoopedFireSound set) */
-	UPROPERTY(EditDefaultsOnly, Category=Sound)
+	UPROPERTY(EditDefaultsOnly, Category="Config|Sound")
 	USoundCue* FireFinishSound;
 
 	/** out of ammo sound */
-	UPROPERTY(EditDefaultsOnly, Category=Sound)
+	UPROPERTY(EditDefaultsOnly, Category="Config|Sound")
 	USoundCue* OutOfAmmoSound;
 
 	/** reload sound */
-	UPROPERTY(EditDefaultsOnly, Category=Sound)
+	UPROPERTY(EditDefaultsOnly, Category="Config|Sound")
 	USoundCue* ReloadSound;
 
 	/** reload animations */
-	UPROPERTY(EditDefaultsOnly, Category=Animation)
+	UPROPERTY(EditDefaultsOnly, Category="Config|Animation")
 	FWeaponAnim ReloadAnim;
 
 	/** equip sound */
-	UPROPERTY(EditDefaultsOnly, Category=Sound)
+	UPROPERTY(EditDefaultsOnly, Category="Config|Sound")
 	USoundCue* EquipSound;
 
 	/** equip animations */
-	UPROPERTY(EditDefaultsOnly, Category=Animation)
+	UPROPERTY(EditDefaultsOnly, Category="Config|Animation")
 	FWeaponAnim EquipAnim;
 
 	/** fire animations */
-	UPROPERTY(EditDefaultsOnly, Category=Animation)
+	UPROPERTY(EditDefaultsOnly, Category="Config|Animation")
 	FWeaponAnim FireAnim;
 
 	/** is muzzle FX looped? */
-	UPROPERTY(EditDefaultsOnly, Category=Effects)
+	UPROPERTY(EditDefaultsOnly, Category="Config|Effects")
 	uint32 bLoopedMuzzleFX : 1;
 
 	/** is fire sound looped? */
-	UPROPERTY(EditDefaultsOnly, Category=Sound)
+	UPROPERTY(EditDefaultsOnly, Category="Config|Sound")
 	uint32 bLoopedFireSound : 1;
 
 	/** is fire animation looped? */
-	UPROPERTY(EditDefaultsOnly, Category=Animation)
+	UPROPERTY(EditDefaultsOnly, Category="Config|Animation")
 	uint32 bLoopedFireAnim : 1;
 
 	/** is fire animation playing? */
@@ -707,11 +724,11 @@ protected:
 	class UStaticMeshComponent* OriginWidgetComp = nullptr;
 
 	// Whether or not to show the visual-representation of the Origin Transform
-	UPROPERTY(EditDefaultsOnly, Meta = (DisplayAfter = "OriginRelativeTransform"), Category = "Configurations|Anim|Weapon Origin Visualizer")
+	UPROPERTY(EditDefaultsOnly, Category = "Config|Animation|Origin Visualizer")
 	bool bShowOriginWidget = false;
 
 	// Setting this will override the default origin widget mesh
-	UPROPERTY(EditDefaultsOnly, Meta = (DisplayAfter = "bShowOriginWidget", EditCondition = "bShowOriginWidget"), Category = "Configurations|Anim|Weapon Origin Visualizer")
+	UPROPERTY(EditDefaultsOnly, Meta = (EditCondition = "bShowOriginWidget"), Category = "Config|Animation|Origin Visualizer")
 	class UStaticMesh* OriginVisualizationMesh;
 	
 	virtual void RegisterAllComponents() override;
@@ -723,10 +740,10 @@ public:
 #if WITH_EDITORONLY_DATA
 	class UStaticMeshComponent* AimOffsetComp = nullptr;
 
-	UPROPERTY(EditDefaultsOnly, Meta = (DisplayName = "Show Aim Offset Visualization Mesh"), Category = "Configurations|Anim|Aiming|Visualization")
+	UPROPERTY(EditDefaultsOnly, Category = "Config|Animation|Aiming|Visualization")
 	bool bShowAimOffset = false;
 	
-	UPROPERTY(EditDefaultsOnly, Meta = (DisplayName = "Aim Offset Visualization Mesh", EditCondition = bShowAimOffset), Category = "Configurations|Anim|Aiming|Visualization")
+	UPROPERTY(EditDefaultsOnly, Meta = (DisplayName = "bShowAimOffset", EditCondition = bShowAimOffset), Category = "Config|Animation|Aiming|Visualization")
 	class UStaticMesh* AimOffsetMesh;
 #endif// WITH_EDITORONLY_DATA
 

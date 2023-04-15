@@ -10,6 +10,7 @@
 #include "Weapons/TrueFPSWeaponBase.h"
 #include "Camera/CameraComponent.h"
 #include "Character/TrueFPSCharacterMovement.h"
+#include "Character/TrueFPSPlayerController.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -17,7 +18,13 @@
 #include "Sound/SoundCue.h"
 #include "GameFramework/DamageType.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Online/TrueFPSGameMode.h"
+#include "Sound/LocalPlayerSoundNode.h"
+#include "UI/TrueFPSHUD.h"
+#include "Weapons/TrueFPSDamageType.h"
 
+FOnTrueFPSCharacterEquipWeapon ATrueFPSCharacter::NotifyEquipWeapon;
+FOnTrueFPSCharacterUnEquipWeapon ATrueFPSCharacter::NotifyUnEquipWeapon;
 
 ATrueFPSCharacter::ATrueFPSCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UTrueFPSCharacterMovement>(ACharacter::CharacterMovementComponentName))
@@ -33,6 +40,8 @@ ATrueFPSCharacter::ATrueFPSCharacter(const FObjectInitializer& ObjectInitializer
 	GetMesh()->SetCollisionResponseToChannel(COLLISION_WEAPON, ECR_Block);
 	GetMesh()->SetCollisionResponseToChannel(COLLISION_PROJECTILE, ECR_Block);
 	GetMesh()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+	GetMesh()->bOnlyOwnerSee = false;
+	GetMesh()->bOwnerNoSee = true;
 
 	// Create the ClientMesh
 	ClientMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Client Mesh"));
@@ -42,6 +51,8 @@ ATrueFPSCharacter::ATrueFPSCharacter(const FObjectInitializer& ObjectInitializer
 	ClientMesh->SetCollisionObjectType(ECC_Pawn);
 	ClientMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	ClientMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
+	ClientMesh->bOnlyOwnerSee = true;
+	ClientMesh->bOwnerNoSee = false;
 	
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
 	GetCapsuleComponent()->SetCollisionResponseToChannel(COLLISION_PROJECTILE, ECR_Block);
@@ -69,8 +80,7 @@ void ATrueFPSCharacter::BeginDestroy()
 		const uint32 UniqueID = GetUniqueID();
 		FAudioThread::RunCommandOnAudioThread([UniqueID]()
 		{
-			// TODO: Finish
-			// USoundNodeLocalPlayer::GetLocallyControlledActorCache().Remove(UniqueID);
+			ULocalPlayerSoundNode::GetLocallyControlledActorCache().Remove(UniqueID);
 		});
 	}
 }
@@ -101,27 +111,25 @@ void ATrueFPSCharacter::Tick(float DeltaSeconds)
 	// Crouching
 	CrouchValue = UKismetMathLibrary::FInterpTo(CrouchValue, CrouchValueTarget, DeltaSeconds, 8.f);
 
-	// TODO: Implement Health Regen
-	// AShooterPlayerController* MyPC = Cast<AShooterPlayerController>(Controller);
-	// if (MyPC && MyPC->HasHealthRegen())
-	// {
-	// 	if (this->Health < this->GetMaxHealth())
-	// 	{
-	// 		this->Health += 5 * DeltaSeconds;
-	// 		if (Health > this->GetMaxHealth())
-	// 		{
-	// 			Health = this->GetMaxHealth();
-	// 		}
-	// 	}
-	// }
+	ATrueFPSPlayerController* MyPC = Cast<ATrueFPSPlayerController>(Controller);
+	if (MyPC && MyPC->HasHealthRegen())
+	{
+		if (this->Health < this->GetMaxHealth())
+		{
+			this->Health += 5 * DeltaSeconds;
+			if (Health > this->GetMaxHealth())
+			{
+				Health = this->GetMaxHealth();
+			}
+		}
+	}
 
 	const APlayerController* PC = Cast<APlayerController>(GetController());
 	const bool bLocallyControlled = (PC ? PC->IsLocalController() : false);
 	const uint32 UniqueID = GetUniqueID();
 	FAudioThread::RunCommandOnAudioThread([UniqueID, bLocallyControlled]()
 	{
-		// TODO: Implement
-	    // USoundNodeLocalPlayer::GetLocallyControlledActorCache().Add(UniqueID, bLocallyControlled);
+	    ULocalPlayerSoundNode::GetLocallyControlledActorCache().Add(UniqueID, bLocallyControlled);
 	});
 	
 	TArray<FVector> PointsToTest;
@@ -139,7 +147,7 @@ void ATrueFPSCharacter::Tick(float DeltaSeconds)
 	AimingTimeline.TickTimeline(DeltaSeconds);
 
 	// Stops aiming if gets close to a wall
-	if (IsLocallyControlled())
+	if (IsLocallyControlled() && bIsAiming)
 		if (CurrentWeapon && CurrentWeapon->IsCloseToWall()) OnStopAiming();
 }
 
@@ -191,17 +199,7 @@ void ATrueFPSCharacter::BeginPlay()
 		}
 	}
 
-	// Setup Client Mesh
-	if (IsLocallyControlled())
-	{
-		GetMesh()->SetVisibility(false);
-		ClientMesh->HideBoneByName(FName("neck_01"), PBO_None);
-	}
-	else
-	{
-		ClientMesh->DestroyComponent();
-		ClientMesh = nullptr;
-	}
+	ClientMesh->HideBoneByName(FName("neck_01"), PBO_None);
 }
 
 void ATrueFPSCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -272,11 +270,66 @@ void ATrueFPSCharacter::Move(const FInputActionValue& Value)
 
 void ATrueFPSCharacter::LookUpDown(const float Value)
 {
+	// If the player has moved their camera to compensate for recoil we need this to cancel out the recoil reset effect
+	if (!FMath::IsNearlyZero(RecoilResetAmount.Y, 0.01f))
+	{
+		if (RecoilResetAmount.Y > 0.f && Value > 0.f)
+		{
+			RecoilResetAmount.Y = FMath::Max(0.f, RecoilResetAmount.Y - Value);
+		}
+		else if (RecoilResetAmount.Y < 0.f && Value < 0.f)
+		{
+			RecoilResetAmount.Y = FMath::Min(0.f, RecoilResetAmount.Y - Value);
+		}
+	}
+
+	// Apply the recoil over several frames
+	if (!FMath::IsNearlyZero(RecoilBumpAmount.Y, 0.01f))
+	{
+		FVector2D LastCurrentRecoil = RecoilBumpAmount;
+		RecoilBumpAmount.Y = FMath::FInterpTo(RecoilBumpAmount.Y, 0.f, GetWorld()->DeltaTimeSeconds, CurrentRecoilSpeed);
+
+		AddControllerPitchInput(LastCurrentRecoil.Y - RecoilBumpAmount.Y);
+	}
+
+	// Slowly reset back to center after recoil is processed
+	FVector2D LastRecoilResetAmount = RecoilResetAmount;
+	RecoilResetAmount.Y = FMath::FInterpTo(RecoilResetAmount.Y, 0.f, GetWorld()->DeltaTimeSeconds, CurrentRecoilResetSpeed);
+	AddControllerPitchInput(LastRecoilResetAmount.Y - RecoilResetAmount.Y);
+	
 	AddControllerPitchInput(Value);
 }
 
 void ATrueFPSCharacter::TurnRightLeft(const float Value)
 {
+	// If the player has moved their camera to compensate for recoil we need this to cancel out the recoil reset effect
+	if (!FMath::IsNearlyZero(RecoilResetAmount.X, 0.01f))
+	{
+		if (RecoilResetAmount.X > 0.f && Value > 0.f)
+		{
+			RecoilResetAmount.X = FMath::Max(0.f, RecoilResetAmount.X - Value);
+		}
+		else if (RecoilResetAmount.X < 0.f && Value < 0.f)
+		{
+			RecoilResetAmount.X = FMath::Min(0.f, RecoilResetAmount.X - Value);
+		}
+	}
+
+	// Apply the recoil over several frames
+	if (!FMath::IsNearlyZero(RecoilBumpAmount.X, 0.1f))
+	{
+		FVector2D LastCurrentRecoil = RecoilBumpAmount;
+		RecoilBumpAmount.X = FMath::FInterpTo(RecoilBumpAmount.X, 0.f, GetWorld()->DeltaTimeSeconds, CurrentRecoilSpeed);
+
+		AddControllerYawInput(LastCurrentRecoil.X - RecoilBumpAmount.X);
+	}
+
+	// Slowly reset back to center after recoil is processed
+	FVector2D LastRecoilResetAmount = RecoilResetAmount;
+	RecoilResetAmount.X = FMath::FInterpTo(RecoilResetAmount.X, 0.f, GetWorld()->DeltaTimeSeconds, CurrentRecoilResetSpeed);
+	AddControllerYawInput(LastRecoilResetAmount.X - RecoilResetAmount.X);
+
+	// Actual Yaw Input
 	AddControllerYawInput(Value);
 }
 
@@ -384,6 +437,20 @@ void ATrueFPSCharacter::SetAiming(bool bNewAiming)
 	}
 }
 
+void ATrueFPSCharacter::LocalApplyRecoil(const FVector2D& RecoilAmount, const float RecoilSpeed, const float RecoilResetSpeed)
+{
+	if (IsLocallyControlled())
+	{
+		RecoilBumpAmount += RecoilAmount;
+		RecoilResetAmount += -RecoilAmount;
+
+		CurrentRecoilSpeed = RecoilSpeed;
+		CurrentRecoilResetSpeed = RecoilResetSpeed;
+
+		LastRecoilTime = GetWorld()->GetTimeSeconds();
+	}
+}
+
 void ATrueFPSCharacter::SetRunning(bool bNewRunning, bool bToggle)
 {
 	bWantsToRun = bNewRunning;
@@ -437,7 +504,7 @@ void ATrueFPSCharacter::OnStartFire()
 	StartWeaponFire();
 	
 	// TODO: Implement
-	// AShooterPlayerController* MyPC = Cast<AShooterPlayerController>(Controller);
+	// ATrueFPSPlayerController* MyPC = Cast<ATrueFPSPlayerController>(Controller);
 	// if (MyPC && MyPC->IsGameInputAllowed())
 	// {
 	// 	if (IsPlayerRunning())
@@ -465,7 +532,7 @@ void ATrueFPSCharacter::OnStartAiming()
 	SetAiming(true);
 	
 	// TODO: Implement
-	// AShooterPlayerController* MyPC = Cast<AShooterPlayerController>(Controller);
+	// ATrueFPSPlayerController* MyPC = Cast<ATrueFPSPlayerController>(Controller);
 	// if (MyPC && MyPC->IsGameInputAllowed())
 	// {
 	// 	if (IsPlayerRunning())
@@ -491,7 +558,7 @@ void ATrueFPSCharacter::OnNextWeapon()
 	}
 	
 	// TODO: Implement
-	// AShooterPlayerController* MyPC = Cast<AShooterPlayerController>(Controller);
+	// ATrueFPSPlayerController* MyPC = Cast<ATrueFPSPlayerController>(Controller);
 	// if (MyPC && MyPC->IsGameInputAllowed())
 	// {
 	// 	if (Inventory.Num() >= 2 && (CurrentWeapon == nullptr || CurrentWeapon->GetCurrentState() != EWeaponState::Equipping))
@@ -770,11 +837,11 @@ void ATrueFPSCharacter::AimingTimelineComplete_Implementation()
 float ATrueFPSCharacter::TakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator,
                                     AActor* DamageCauser)
 {
-	// AShooterPlayerController* MyPC = Cast<AShooterPlayerController>(Controller);
-	// if (MyPC && MyPC->HasGodMode())
-	// {
-	// 	return 0.f;
-	// }
+	ATrueFPSPlayerController* MyPC = Cast<ATrueFPSPlayerController>(Controller);
+	if (MyPC && MyPC->HasGodMode())
+	{
+		return 0.f;
+	}
 
 	if (Health <= 0.f)
 	{
@@ -782,8 +849,8 @@ float ATrueFPSCharacter::TakeDamage(float Damage, FDamageEvent const& DamageEven
 	}
 
 	// Modify based on game rules.
-	// AShooterGameMode* const Game = GetWorld()->GetAuthGameMode<AShooterGameMode>();
-	// Damage = Game ? Game->ModifyDamage(Damage, this, DamageEvent, EventInstigator, DamageCauser) : 0.f;
+	ATrueFPSGameMode* const Game = GetWorld()->GetAuthGameMode<ATrueFPSGameMode>();
+	Damage = Game ? Game->ModifyDamage(Damage, this, DamageEvent, EventInstigator, DamageCauser) : 0.f;
 
 	const float ActualDamage = Super::TakeDamage(Damage, DamageEvent, EventInstigator, DamageCauser);
 	if (ActualDamage > 0.f)
@@ -793,10 +860,8 @@ float ATrueFPSCharacter::TakeDamage(float Damage, FDamageEvent const& DamageEven
 		{
 			Die(ActualDamage, DamageEvent, EventInstigator, DamageCauser);
 		}
-		else
-		{
-			PlayHit(ActualDamage, DamageEvent, EventInstigator ? EventInstigator->GetPawn() : nullptr, DamageCauser);
-		}
+
+		PlayHit(ActualDamage, DamageEvent, EventInstigator ? EventInstigator->GetPawn() : nullptr, DamageCauser, Health <= 0);
 
 		MakeNoise(1.0f, EventInstigator ? EventInstigator->GetPawn() : this);
 	}
@@ -828,8 +893,10 @@ bool ATrueFPSCharacter::CanDie(float KillingDamage, FDamageEvent const& DamageEv
 	AActor* DamageCauser) const
 {
 	if (bIsDying										// already dying
-		|| IsValid(this)								// already destroyed
-		|| GetLocalRole() != ROLE_Authority)			// not authority	// level transition occurring
+		|| IsPendingKill()								// already destroyed
+		|| GetLocalRole() != ROLE_Authority				// not authority
+		|| GetWorld()->GetAuthGameMode<ATrueFPSGameMode>() == nullptr
+		|| GetWorld()->GetAuthGameMode<ATrueFPSGameMode>()->GetMatchState() == MatchState::LeavingMap)	// level transition occurring
 	{
 		return false;
 	}
@@ -851,8 +918,8 @@ bool ATrueFPSCharacter::Die(float KillingDamage, FDamageEvent const& DamageEvent
 	UDamageType const* const DamageType = DamageEvent.DamageTypeClass ? DamageEvent.DamageTypeClass->GetDefaultObject<UDamageType>() : GetDefault<UDamageType>();
 	Killer = GetDamageInstigator(Killer, *DamageType);
 
-	// AController* const KilledPlayer = (Controller != nullptr) ? Controller : Cast<AController>(GetOwner());
-	// GetWorld()->GetAuthGameMode<AShooterGameMode>()->Killed(Killer, KilledPlayer, this, DamageType);
+	AController* const KilledPlayer = (Controller != nullptr) ? Controller : Cast<AController>(GetOwner());
+	GetWorld()->GetAuthGameMode<ATrueFPSGameMode>()->Killed(Killer, KilledPlayer, this, DamageType);
 
 	NetUpdateFrequency = GetDefault<ATrueFPSCharacter>()->NetUpdateFrequency;
 	GetCharacterMovement()->ForceReplicationUpdate();
@@ -915,17 +982,17 @@ void ATrueFPSCharacter::OnDeath(float KillingDamage, FDamageEvent const& DamageE
 		ReplicateHit(KillingDamage, DamageEvent, PawnInstigator, DamageCauser, true);
 
 		// play the force feedback effect on the client player controller
-		// AShooterPlayerController* PC = Cast<AShooterPlayerController>(Controller);
-		// if (PC && DamageEvent.DamageTypeClass)
-		// {
-		// 	UShooterDamageType *DamageType = Cast<UShooterDamageType>(DamageEvent.DamageTypeClass->GetDefaultObject());
-		// 	if (DamageType && DamageType->KilledForceFeedback && PC->IsVibrationEnabled())
-		// 	{
-		// 		FForceFeedbackParameters FFParams;
-		// 		FFParams.Tag = "Damage";
-		// 		PC->ClientPlayForceFeedback(DamageType->KilledForceFeedback, FFParams);
-		// 	}
-		// }
+		ATrueFPSPlayerController* PC = Cast<ATrueFPSPlayerController>(Controller);
+		if (PC && DamageEvent.DamageTypeClass)
+		{
+			UTrueFPSDamageType *DamageType = Cast<UTrueFPSDamageType>(DamageEvent.DamageTypeClass->GetDefaultObject());
+			if (DamageType && DamageType->KilledForceFeedback && PC->IsVibrationEnabled())
+			{
+				FForceFeedbackParameters FFParams;
+				FFParams.Tag = "Damage";
+				PC->ClientPlayForceFeedback(DamageType->KilledForceFeedback, FFParams);
+			}
+		}
 	}
 
 	// cannot use IsLocallyControlled here, because even local client's controller may be nullptr here
@@ -975,24 +1042,24 @@ void ATrueFPSCharacter::OnDeath(float KillingDamage, FDamageEvent const& DamageE
 }
 
 void ATrueFPSCharacter::PlayHit(float DamageTaken, FDamageEvent const& DamageEvent, APawn* PawnInstigator,
-	AActor* DamageCauser)
+	AActor* DamageCauser, bool bKilled/* = false*/)
 {
 	if (GetLocalRole() == ROLE_Authority)
 	{
-		ReplicateHit(DamageTaken, DamageEvent, PawnInstigator, DamageCauser, false);
+		ReplicateHit(DamageTaken, DamageEvent, PawnInstigator, DamageCauser, bKilled);
 
 		// play the force feedback effect on the client player controller
-		// AShooterPlayerController* PC = Cast<AShooterPlayerController>(Controller);
-		// if (PC && DamageEvent.DamageTypeClass)
-		// {
-		// 	UShooterDamageType *DamageType = Cast<UShooterDamageType>(DamageEvent.DamageTypeClass->GetDefaultObject());
-		// 	if (DamageType && DamageType->HitForceFeedback && PC->IsVibrationEnabled())
-		// 	{
-		// 		FForceFeedbackParameters FFParams;
-		// 		FFParams.Tag = "Damage";
-		// 		PC->ClientPlayForceFeedback(DamageType->HitForceFeedback, FFParams);
-		// 	}
-		// }
+		ATrueFPSPlayerController* PC = Cast<ATrueFPSPlayerController>(Controller);
+		if (PC && DamageEvent.DamageTypeClass)
+		{
+			UTrueFPSDamageType *DamageType = Cast<UTrueFPSDamageType>(DamageEvent.DamageTypeClass->GetDefaultObject());
+			if (DamageType && DamageType->HitForceFeedback && PC->IsVibrationEnabled())
+			{
+				FForceFeedbackParameters FFParams;
+				FFParams.Tag = "Damage";
+				PC->ClientPlayForceFeedback(DamageType->HitForceFeedback, FFParams);
+			}
+		}
 	}
 
 	if (DamageTaken > 0.f)
@@ -1000,29 +1067,29 @@ void ATrueFPSCharacter::PlayHit(float DamageTaken, FDamageEvent const& DamageEve
 		ApplyDamageMomentum(DamageTaken, DamageEvent, PawnInstigator, DamageCauser);
 	}
 
-	// AShooterPlayerController* MyPC = Cast<AShooterPlayerController>(Controller);
-	// AShooterHUD* MyHUD = MyPC ? Cast<AShooterHUD>(MyPC->GetHUD()) : nullptr;
-	// if (MyHUD)
-	// {
-	// 	MyHUD->NotifyWeaponHit(DamageTaken, DamageEvent, PawnInstigator);
-	// }
-	//
-	// if (PawnInstigator && PawnInstigator != this && PawnInstigator->IsLocallyControlled())
-	// {
-	// 	AShooterPlayerController* InstigatorPC = Cast<AShooterPlayerController>(PawnInstigator->Controller);
-	// 	AShooterHUD* InstigatorHUD = InstigatorPC ? Cast<AShooterHUD>(InstigatorPC->GetHUD()) : nullptr;
-	// 	if (InstigatorHUD)
-	// 	{
-	// 		InstigatorHUD->NotifyEnemyHit();
-	// 	}
-	// }
+	ATrueFPSPlayerController* MyPC = Cast<ATrueFPSPlayerController>(Controller);
+	ATrueFPSHUD* MyHUD = MyPC ? Cast<ATrueFPSHUD>(MyPC->GetHUD()) : nullptr;
+	if (MyHUD)
+	{
+		MyHUD->NotifyWeaponHit(DamageTaken, DamageEvent, PawnInstigator);
+	}
+	
+	if (PawnInstigator && PawnInstigator != this && PawnInstigator->IsLocallyControlled())
+	{
+		ATrueFPSPlayerController* InstigatorPC = Cast<ATrueFPSPlayerController>(PawnInstigator->Controller);
+		ATrueFPSHUD* InstigatorHUD = InstigatorPC ? Cast<ATrueFPSHUD>(InstigatorPC->GetHUD()) : nullptr;
+		if (InstigatorHUD)
+		{
+			InstigatorHUD->NotifyEnemyHit(bKilled);
+		}
+	}
 }
 
 void ATrueFPSCharacter::SetRagdollPhysics()
 {
 	bool bInRagdoll = false;
 
-	if (IsValid(this))
+	if (IsPendingKill())
 	{
 		bInRagdoll = false;
 	}
@@ -1092,10 +1159,8 @@ void ATrueFPSCharacter::OnRep_LastTakeHitInfo()
 	{
 		OnDeath(LastTakeHitInfo.ActualDamage, LastTakeHitInfo.GetDamageEvent(), LastTakeHitInfo.PawnInstigator.Get(), LastTakeHitInfo.DamageCauser.Get());
 	}
-	else
-	{
-		PlayHit(LastTakeHitInfo.ActualDamage, LastTakeHitInfo.GetDamageEvent(), LastTakeHitInfo.PawnInstigator.Get(), LastTakeHitInfo.DamageCauser.Get());
-	}
+	
+	PlayHit(LastTakeHitInfo.ActualDamage, LastTakeHitInfo.GetDamageEvent(), LastTakeHitInfo.PawnInstigator.Get(), LastTakeHitInfo.DamageCauser.Get(), LastTakeHitInfo.bKilled);
 }
 
 void ATrueFPSCharacter::SetCurrentWeapon(ATrueFPSWeaponBase* NewWeapon, ATrueFPSWeaponBase* LastWeapon)

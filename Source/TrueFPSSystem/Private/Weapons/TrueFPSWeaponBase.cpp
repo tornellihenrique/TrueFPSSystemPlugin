@@ -7,6 +7,7 @@
 #include "Character/TrueFPSCharacterInterface.h"
 #include "GameFramework/Character.h"
 #include "VisualizationMacros.h"
+#include "Character/TrueFPSPlayerController.h"
 #include "Components/AudioComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -53,6 +54,9 @@ ATrueFPSWeaponBase::ATrueFPSWeaponBase(const FObjectInitializer& ObjectInitializ
 	CurrentAmmoInClip = 0;
 	BurstCounter = 0;
 	LastFireTime = 0.0f;
+	
+	RecoilResetSpeed = 5.f;
+	RecoilSpeed = 10.f;
 
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.TickGroup = TG_PrePhysics;
@@ -632,9 +636,15 @@ void ATrueFPSWeaponBase::SimulateWeaponFire()
 	// Adding Recoil
 	AddRecoilInstance(WeaponAnimProperties.RecoilParams);
 
-	APlayerController* PC = (MyPawn != nullptr) ? Cast<APlayerController>(MyPawn->Controller) : nullptr;
+	ATrueFPSPlayerController* PC = (MyPawn != nullptr) ? Cast<ATrueFPSPlayerController>(MyPawn->Controller) : nullptr;
 	if (PC != nullptr && PC->IsLocalController())
 	{
+		if (RecoilCurve != nullptr && MyPawn && MyPawn->Implements<UTrueFPSCharacterInterface>())
+		{
+			const FVector2D RecoilAmount(RecoilCurve->GetVectorValue(FMath::RandRange(0.f, 1.f)).X, RecoilCurve->GetVectorValue(FMath::RandRange(0.f, 1.f)).Y);
+			ITrueFPSCharacterInterface::Execute_ApplyRecoil(MyPawn, RecoilAmount, RecoilSpeed, RecoilResetSpeed);
+		}
+		
 		if (FireCameraShake != nullptr)
 		{
 			PC->ClientStartCameraShake(FireCameraShake, 1);
@@ -942,7 +952,7 @@ void ATrueFPSWeaponBase::AttachMeshToPawn()
 			USkeletalMeshComponent* PawnMesh1p = MyPawn->Implements<UTrueFPSCharacterInterface>() ? ITrueFPSCharacterInterface::Execute_GetSpecificPawnMesh(MyPawn, true) : MyPawn->GetMesh();
 			USkeletalMeshComponent* PawnMesh3p = MyPawn->Implements<UTrueFPSCharacterInterface>() ? ITrueFPSCharacterInterface::Execute_GetSpecificPawnMesh(MyPawn, false) : MyPawn->GetMesh();
 			Mesh1P->SetHiddenInGame(false);
-			Mesh3P->SetHiddenInGame(true);
+			Mesh3P->SetHiddenInGame(false);
 			Mesh1P->AttachToComponent(PawnMesh1p, FAttachmentTransformRules::KeepRelativeTransform, AttachPoint);
 			Mesh3P->AttachToComponent(PawnMesh3p, FAttachmentTransformRules::KeepRelativeTransform, AttachPoint);
 			Mesh1P->SetRelativeTransform(WeaponAnimProperties.PlacementTransform);

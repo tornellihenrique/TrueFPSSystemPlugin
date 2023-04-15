@@ -4,6 +4,7 @@
 
 #include "Components/PointLightComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Sound/SoundCue.h"
 
 ATrueFPSExplosionEffect::ATrueFPSExplosionEffect(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {

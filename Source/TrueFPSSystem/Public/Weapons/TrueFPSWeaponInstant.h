@@ -28,7 +28,7 @@ struct FInstantHitInfo
 	}
 };
 
-USTRUCT()
+USTRUCT(DisplayName = "Weapon Instant")
 struct FInstantWeaponData
 {
 	GENERATED_USTRUCT_BODY()
@@ -105,19 +105,19 @@ protected:
 	}
 
 	/** weapon config */
-	UPROPERTY(EditDefaultsOnly, Category=Config)
+	UPROPERTY(EditDefaultsOnly, Category="Config", meta = (DisplayAfter = "WeaponConfig"))
 	FInstantWeaponData InstantConfig;
 
 	/** impact effects */
-	UPROPERTY(EditDefaultsOnly, Category=Effects)
+	UPROPERTY(EditDefaultsOnly, Category="Config|Effects")
 	TSubclassOf<class ATrueFPSImpactEffect> ImpactTemplate;
 
 	/** smoke trail */
-	UPROPERTY(EditDefaultsOnly, Category=Effects)
+	UPROPERTY(EditDefaultsOnly, Category="Config|Effects")
 	UParticleSystem* TrailFX;
 
 	/** param name for beam target in smoke trail */
-	UPROPERTY(EditDefaultsOnly, Category=Effects)
+	UPROPERTY(EditDefaultsOnly, Category="Config|Effects")
 	FName TrailTargetParam;
 
 	/** instant hit notify for replication */

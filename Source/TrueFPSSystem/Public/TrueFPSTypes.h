@@ -10,6 +10,54 @@
 class UNiagaraSystem;
 class USoundBase;
 
+namespace ETrueFPSMatchState
+{
+	enum Type
+	{
+		Warmup,
+		Playing,
+		Won,
+		Lost,
+	};
+}
+
+namespace ETrueFPSCrosshairDirection
+{
+	enum Type
+	{
+		Left=0,
+		Right=1,
+		Top=2,
+		Bottom=3,
+		Center=4
+	};
+}
+
+namespace ETrueFPSHudPosition
+{
+	enum Type
+	{
+		Left=0,
+		FrontLeft=1,
+		Front=2,
+		FrontRight=3,
+		Right=4,
+		BackRight=5,
+		Back=6,
+		BackLeft=7,
+	};
+}
+
+namespace ETrueFPSDialogType
+{
+	enum Type
+	{
+		None,
+		Generic,
+		ControllerDisconnected
+	};
+}
+
 #define TRUEFPS_SURFACE_Default		SurfaceType_Default
 #define TRUEFPS_SURFACE_Concrete	SurfaceType1
 #define TRUEFPS_SURFACE_Dirt		SurfaceType2

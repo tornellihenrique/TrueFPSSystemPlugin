@@ -6,7 +6,7 @@
 #include "Weapons/TrueFPSWeaponBase.h"
 #include "TrueFPSWeaponProjectile.generated.h"
 
-USTRUCT()
+USTRUCT(DisplayName = "Weapon Projectile")
 struct FProjectileWeaponData
 {
 	GENERATED_USTRUCT_BODY()
@@ -65,7 +65,7 @@ protected:
 	}
 
 	/** weapon config */
-	UPROPERTY(EditDefaultsOnly, Category=Config)
+	UPROPERTY(EditDefaultsOnly, Category="Config", meta = (DisplayAfter = "WeaponConfig"))
 	FProjectileWeaponData ProjectileConfig;
 
 	//////////////////////////////////////////////////////////////////////////
