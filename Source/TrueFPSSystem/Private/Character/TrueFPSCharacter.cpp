@@ -68,6 +68,7 @@ ATrueFPSCharacter::ATrueFPSCharacter(const FObjectInitializer& ObjectInitializer
 	RunningSpeedModifier = 1.5f;
 	bWantsToRun = false;
 	bWantsToFire = false;
+	Health = 50.f;
 	LowHealthPercentage = 0.5f;
 }
 

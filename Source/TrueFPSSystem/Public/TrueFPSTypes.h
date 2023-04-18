@@ -59,14 +59,14 @@ namespace ETrueFPSDialogType
 }
 
 #define TRUEFPS_SURFACE_Default		SurfaceType_Default
-#define TRUEFPS_SURFACE_Concrete	SurfaceType1
-#define TRUEFPS_SURFACE_Dirt		SurfaceType2
-#define TRUEFPS_SURFACE_Water		SurfaceType3
-#define TRUEFPS_SURFACE_Metal		SurfaceType4
-#define TRUEFPS_SURFACE_Wood		SurfaceType5
-#define TRUEFPS_SURFACE_Grass		SurfaceType6
-#define TRUEFPS_SURFACE_Glass		SurfaceType7
-#define TRUEFPS_SURFACE_Flesh		SurfaceType8
+#define TRUEFPS_SURFACE_Flesh		SurfaceType1
+#define TRUEFPS_SURFACE_Concrete	SurfaceType2
+#define TRUEFPS_SURFACE_Glass		SurfaceType3
+#define TRUEFPS_SURFACE_Dirt		SurfaceType4
+#define TRUEFPS_SURFACE_Water		SurfaceType5
+#define TRUEFPS_SURFACE_Metal		SurfaceType6
+#define TRUEFPS_SURFACE_Wood		SurfaceType7
+#define TRUEFPS_SURFACE_Grass		SurfaceType8
 
 /* Returns the enumeration value as string. */
 template <typename Enumeration>

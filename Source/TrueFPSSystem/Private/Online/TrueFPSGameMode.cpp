@@ -111,6 +111,15 @@ void ATrueFPSGameMode::RestartPlayer(AController* NewPlayer)
 			ATrueFPSCharacter::NotifyEquipWeapon.Broadcast(Character, Character->GetWeapon());
 		}
 		
+		ATrueFPSHUD* TrueFPSHUD = Cast<ATrueFPSHUD>(PC->GetHUD());
+		if (TrueFPSHUD)
+		{
+			// Passing HUD draw settings
+			TrueFPSHUD->SetShouldDrawDeathMessages(bDrawDeathMessages);
+			TrueFPSHUD->SetShouldDrawMatchTime(bDrawMatchTime);
+			TrueFPSHUD->SetShouldDrawKills(bDrawKills);
+		}
+		
 		PC->ClientGameStarted();
 	}
 }

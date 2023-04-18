@@ -3,6 +3,9 @@
 
 #include "Weapons/TrueFPSWeaponBase.h"
 
+#include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
 #include "TrueFPSSystem.h"
 #include "Character/TrueFPSCharacterInterface.h"
 #include "GameFramework/Character.h"
@@ -96,6 +99,9 @@ void ATrueFPSWeaponBase::Tick(float DeltaSeconds)
 
 	// Smooth sights toggling
 	SightsRelativeTransform = UKismetMathLibrary::TInterpTo(SightsRelativeTransform, TargetSightsRelativeTransform, DeltaSeconds, 8.f);
+
+	// Smooth wall offset
+	WallOffsetTransformAlpha = UKismetMathLibrary::FInterpTo(WallOffsetTransformAlpha, CalculateWallOffsetTransformAlpha(), DeltaSeconds, 8.f);
 }
 
 void ATrueFPSWeaponBase::PostInitializeComponents()
@@ -615,6 +621,69 @@ void ATrueFPSWeaponBase::SimulateWeaponFire()
 		}
 	}
 
+	if (NiagaraMuzzleFX.LoadSynchronous())
+	{
+		USkeletalMeshComponent* UseWeaponMesh = GetWeaponMesh();
+		if (!bLoopedMuzzleFX || NiagaraMuzzleNC == nullptr)
+		{
+			// Split screen requires we create 2 effects. One that we see and one that the other player sees.
+			if( (MyPawn != nullptr ) && ( MyPawn->IsLocallyControlled() == true ) )
+			{
+				AController* PlayerCon = MyPawn->GetController();				
+				if( PlayerCon != nullptr )
+				{
+					NiagaraMuzzleNC = UNiagaraFunctionLibrary::SpawnSystemAttached(NiagaraMuzzleFX.Get(), Mesh1P, MuzzleAttachPoint, FVector(ForceInit), FRotator::ZeroRotator, EAttachLocation::KeepRelativeOffset, true);
+					NiagaraMuzzleNC->bOwnerNoSee = false;
+					NiagaraMuzzleNC->bOnlyOwnerSee = true;
+					NiagaraMuzzleNC->SetNiagaraVariableBool(NiagaraMuzzleTriggerParam.ToString(), true);
+
+					NiagaraMuzzleNCSecondary = UNiagaraFunctionLibrary::SpawnSystemAttached(NiagaraMuzzleFX.Get(), Mesh3P, MuzzleAttachPoint, FVector(ForceInit), FRotator::ZeroRotator, EAttachLocation::KeepRelativeOffset, true);
+					NiagaraMuzzleNCSecondary->bOwnerNoSee = true;
+					NiagaraMuzzleNCSecondary->bOnlyOwnerSee = false;
+					NiagaraMuzzleNCSecondary->SetNiagaraVariableBool(NiagaraMuzzleTriggerParam.ToString(), true);
+				}				
+			}
+			else
+			{
+				NiagaraMuzzleNC = UNiagaraFunctionLibrary::SpawnSystemAttached(NiagaraMuzzleFX.Get(), UseWeaponMesh, MuzzleAttachPoint, FVector(ForceInit), FRotator::ZeroRotator, EAttachLocation::KeepRelativeOffset, true);
+				NiagaraMuzzleNC->SetNiagaraVariableBool(NiagaraMuzzleTriggerParam.ToString(), true);
+			}
+		}
+	}
+
+	if (NiagaraShellFX.LoadSynchronous() && ShellMesh.LoadSynchronous())
+	{
+		USkeletalMeshComponent* UseWeaponMesh = GetWeaponMesh();
+		if (!bLoopedShellFX || NiagaraShellNC == nullptr)
+		{
+			// Split screen requires we create 2 effects. One that we see and one that the other player sees.
+			if( (MyPawn != nullptr ) && ( MyPawn->IsLocallyControlled() == true ) )
+			{
+				AController* PlayerCon = MyPawn->GetController();				
+				if( PlayerCon != nullptr )
+				{
+					NiagaraShellNC = UNiagaraFunctionLibrary::SpawnSystemAttached(NiagaraShellFX.Get(), Mesh1P, NAME_None, Mesh1P->GetSocketTransform(ShellEjectSocketName, RTS_Actor).GetLocation(), FRotator(0.f, 90.f, 0.f), EAttachLocation::KeepRelativeOffset, true);
+					NiagaraShellNC->bOwnerNoSee = false;
+					NiagaraShellNC->bOnlyOwnerSee = true;
+					NiagaraShellNC->SetNiagaraVariableBool(NiagaraShellTriggerParam.ToString(), true);
+					NiagaraShellNC->SetVariableStaticMesh(NiagaraShellMeshParam, ShellMesh.Get());
+
+					NiagaraShellNCSecondary = UNiagaraFunctionLibrary::SpawnSystemAttached(NiagaraShellFX.Get(), Mesh3P, NAME_None, Mesh3P->GetSocketTransform(ShellEjectSocketName, RTS_Actor).GetLocation(), FRotator(0.f, 90.f, 0.f), EAttachLocation::KeepRelativeOffset, true);
+					NiagaraShellNCSecondary->bOwnerNoSee = true;
+					NiagaraShellNCSecondary->bOnlyOwnerSee = false;
+					NiagaraShellNCSecondary->SetNiagaraVariableBool(NiagaraShellTriggerParam.ToString(), true);
+					NiagaraShellNCSecondary->SetVariableStaticMesh(NiagaraShellMeshParam, ShellMesh.Get());
+				}				
+			}
+			else
+			{
+				NiagaraShellNC = UNiagaraFunctionLibrary::SpawnSystemAttached(NiagaraShellFX.Get(), UseWeaponMesh, NAME_None, UseWeaponMesh->GetSocketTransform(ShellEjectSocketName, RTS_Actor).GetLocation(), FRotator(0.f, 90.f, 0.f), EAttachLocation::KeepRelativeOffset, true);
+				NiagaraShellNC->SetNiagaraVariableBool(NiagaraShellTriggerParam.ToString(), true);
+				NiagaraShellNC->SetVariableStaticMesh(NiagaraShellMeshParam, ShellMesh.Get());
+			}
+		}
+	}
+
 	if (!bLoopedFireAnim || !bPlayingFireAnim)
 	{
 		PlayWeaponAnimation(FireAnim);
@@ -952,7 +1021,7 @@ void ATrueFPSWeaponBase::AttachMeshToPawn()
 			USkeletalMeshComponent* PawnMesh1p = MyPawn->Implements<UTrueFPSCharacterInterface>() ? ITrueFPSCharacterInterface::Execute_GetSpecificPawnMesh(MyPawn, true) : MyPawn->GetMesh();
 			USkeletalMeshComponent* PawnMesh3p = MyPawn->Implements<UTrueFPSCharacterInterface>() ? ITrueFPSCharacterInterface::Execute_GetSpecificPawnMesh(MyPawn, false) : MyPawn->GetMesh();
 			Mesh1P->SetHiddenInGame(false);
-			Mesh3P->SetHiddenInGame(false);
+			Mesh3P->SetHiddenInGame(true);
 			Mesh1P->AttachToComponent(PawnMesh1p, FAttachmentTransformRules::KeepRelativeTransform, AttachPoint);
 			Mesh3P->AttachToComponent(PawnMesh3p, FAttachmentTransformRules::KeepRelativeTransform, AttachPoint);
 			Mesh1P->SetRelativeTransform(WeaponAnimProperties.PlacementTransform);
@@ -990,7 +1059,7 @@ void ATrueFPSWeaponBase::DetachMeshFromPawn()
 			CurrentAttachment->SetVisibility(false);
 }
 
-UAudioComponent* ATrueFPSWeaponBase::PlayWeaponSound(USoundCue* Sound)
+UAudioComponent* ATrueFPSWeaponBase::PlayWeaponSound(USoundBase* Sound)
 {
 	UAudioComponent* AC = nullptr;
 	if (Sound && MyPawn)
@@ -1177,7 +1246,7 @@ FTransform ATrueFPSWeaponBase::GetOrientationWorldTransform(const float AimingVa
 	return GetOrientationRelativeTransform(AimingValue) * GetActorTransform();
 }
 
-float ATrueFPSWeaponBase::GetWallOffsetTransformAlpha() const
+float ATrueFPSWeaponBase::CalculateWallOffsetTransformAlpha() const
 {
 	if (!GetPawnOwner()) return 0.f;
 	if (!GetPawnOwner()->Implements<UTrueFPSCharacterInterface>()) return 0.f;

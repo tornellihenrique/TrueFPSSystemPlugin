@@ -41,16 +41,16 @@ ATrueFPSHUD::ATrueFPSHUD(const FObjectInitializer& ObjectInitializer) : Super(Ob
 
 	OnPlayerTalkingStateChangedDelegate = FOnPlayerTalkingStateChangedDelegate::CreateUObject(this, &ATrueFPSHUD::OnPlayerTalkingStateChanged);
 
-	static ConstructorHelpers::FObjectFinder<UTexture2D> HitTextureOb(TEXT("/Game/UI/HUD/HitIndicator"));
-	static ConstructorHelpers::FObjectFinder<UTexture2D> HUDMainTextureOb(TEXT("/Game/UI/HUD/HUDMain"));
-	static ConstructorHelpers::FObjectFinder<UTexture2D> HUDAssets02TextureOb(TEXT("/Game/UI/HUD/HUDAssets02"));
-	static ConstructorHelpers::FObjectFinder<UTexture2D> LowHealthOverlayTextureOb(TEXT("/Game/UI/HUD/LowHealthOverlay"));
+	static ConstructorHelpers::FObjectFinder<UTexture2D> HitTextureOb(TEXT("/TrueFPSSystemPlugin/UI/HUD/HitIndicator"));
+	static ConstructorHelpers::FObjectFinder<UTexture2D> HUDMainTextureOb(TEXT("/TrueFPSSystemPlugin/UI/HUD/HUDMain"));
+	static ConstructorHelpers::FObjectFinder<UTexture2D> HUDAssets02TextureOb(TEXT("/TrueFPSSystemPlugin/UI/HUD/HUDAssets02"));
+	static ConstructorHelpers::FObjectFinder<UTexture2D> LowHealthOverlayTextureOb(TEXT("/TrueFPSSystemPlugin/UI/HUD/LowHealthOverlay"));
 
 	// Fonts are not included in dedicated server builds.
 	#if !UE_SERVER
 	{
-		static ConstructorHelpers::FObjectFinder<UFont> BigFontOb(TEXT("/Game/UI/HUD/Roboto51"));
-		static ConstructorHelpers::FObjectFinder<UFont> NormalFontOb(TEXT("/Game/UI/HUD/Roboto18"));
+		static ConstructorHelpers::FObjectFinder<UFont> BigFontOb(TEXT("/TrueFPSSystemPlugin/UI/HUD/Roboto51"));
+		static ConstructorHelpers::FObjectFinder<UFont> NormalFontOb(TEXT("/TrueFPSSystemPlugin/UI/HUD/Roboto18"));
 		BigFont = BigFontOb.Object;
 		NormalFont = NormalFontOb.Object;
 	}
@@ -715,6 +715,8 @@ void ATrueFPSHUD::DrawWeaponHUD()
 
 void ATrueFPSHUD::DrawKills()
 {
+	if (!bShouldDrawKills) return;
+	
 	ATrueFPSPlayerController* MyPC = Cast<ATrueFPSPlayerController>(PlayerOwner);
 	ATrueFPSPlayerState* MyPlayerState = Cast<ATrueFPSPlayerState>(MyPC->PlayerState);
 
@@ -779,6 +781,8 @@ void ATrueFPSHUD::DrawHealth()
 
 void ATrueFPSHUD::DrawMatchTimerAndPosition()
 {
+	if (!bShouldDrawMatchTime) return;
+	
 	ATrueFPSGameState* const MyGameState = GetWorld()->GetGameState<ATrueFPSGameState>();
 	Canvas->SetDrawColor(FColor::White);
 	const float TimerPosX = Canvas->ClipX - Canvas->OrgX - (TimePlaceBg.UL + Offset) * ScaleUI;
@@ -881,7 +885,8 @@ void ATrueFPSHUD::DrawCrosshair()
 		const float CurrentTime = GetWorld()->GetTimeSeconds();
 		float CenterX = Canvas->ClipX / 2;
 		float CenterY = Canvas->ClipY / 2;
-		
+
+		// Hit Notify
 		if (CurrentTime - LastEnemyHitTime >= 0 && CurrentTime - LastEnemyHitTime <= LastEnemyHitDisplayTime)
 		{
 			const float Alpha = FMath::Min(1.0f, 1 - (CurrentTime - LastEnemyHitTime) / LastEnemyHitDisplayTime);
@@ -895,8 +900,7 @@ void ATrueFPSHUD::DrawCrosshair()
 		}
 		
 		ATrueFPSCharacter* Pawn =  Cast<ATrueFPSCharacter>(PCOwner->GetPawn());
-		if (Pawn && Pawn->GetWeapon() && !Pawn->IsPlayerRunning() 
-			&& ((Pawn->IsPlayerAiming() && !Pawn->GetWeapon()->bHideCrosshairWhileAiming) || (!Pawn->IsPlayerAiming() && !Pawn->GetWeapon()->bHideCrosshairWhileNotAiming)))
+		if (Pawn && Pawn->GetWeapon() && !Pawn->IsPlayerRunning())
 		{
 			const float SpreadMulti = 300;
 			ATrueFPSWeaponInstant* InstantWeapon = Cast<ATrueFPSWeaponInstant>(Pawn->GetWeapon());
@@ -941,7 +945,7 @@ void ATrueFPSHUD::DrawCrosshair()
 					CenterX - (*CurrentCrosshair[ETrueFPSCrosshairDirection::Center]).UL*ScaleUI / 2.0f,
 					CenterY - (*CurrentCrosshair[ETrueFPSCrosshairDirection::Center]).VL*ScaleUI / 2.0f, ScaleUI);
 			}
-			else
+			else if ((Pawn->IsPlayerAiming() && !Pawn->GetWeapon()->bHideCrosshairWhileAiming) || (!Pawn->IsPlayerAiming() && !Pawn->GetWeapon()->bHideCrosshairWhileNotAiming))
 			{
 				Canvas->DrawIcon(*CurrentCrosshair[ETrueFPSCrosshairDirection::Center], 
 					CenterX - (*CurrentCrosshair[ETrueFPSCrosshairDirection::Center]).UL*ScaleUI / 2.0f, 
@@ -988,6 +992,8 @@ void ATrueFPSHUD::DrawHitIndicator()
 
 void ATrueFPSHUD::DrawDeathMessages()
 {
+	if (!bShouldDrawDeathMessages) return;
+	
 	if (PlayerOwner == nullptr)
 	{
 		return;

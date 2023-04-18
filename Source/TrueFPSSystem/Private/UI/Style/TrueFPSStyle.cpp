@@ -36,7 +36,7 @@ FName FTrueFPSStyle::GetStyleSetName()
 PRAGMA_DISABLE_OPTIMIZATION
 TSharedRef< FSlateStyleSet > FTrueFPSStyle::Create()
 {
-	TSharedRef<FSlateStyleSet> StyleRef = FSlateGameResources::New(FTrueFPSStyle::GetStyleSetName(), "/Game/UI/Styles", "/Game/UI/Styles");
+	TSharedRef<FSlateStyleSet> StyleRef = FSlateGameResources::New(FTrueFPSStyle::GetStyleSetName(), "/TrueFPSSystemPlugin/UI/Styles", "/TrueFPSSystemPlugin/UI/Styles");
 	FSlateStyleSet& Style = StyleRef.Get();
 
 	// Load the speaker icon to be used for displaying when a user is talking

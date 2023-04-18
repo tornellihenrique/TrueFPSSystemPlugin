@@ -111,6 +111,15 @@ protected:
 	UPROPERTY(config)
 	int32 MaxBots;
 
+	UPROPERTY(config)
+	bool bDrawDeathMessages = false;
+
+	UPROPERTY(config)
+	bool bDrawMatchTime = false;
+
+	UPROPERTY(config)
+	bool bDrawKills = false;
+
 	// UPROPERTY()
 	// TArray<AShooterAIController*> BotControllers; @todo implement bots
 

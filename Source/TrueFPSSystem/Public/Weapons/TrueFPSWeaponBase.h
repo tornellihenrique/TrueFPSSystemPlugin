@@ -13,7 +13,7 @@ class ACharacter;
 class UAudioComponent;
 class UParticleSystemComponent;
 class UForceFeedbackEffect;
-class USoundCue;
+class USoundBase;
 class UCameraShakeBase;
 
 namespace EWeaponState
@@ -109,7 +109,7 @@ struct FWeaponAnimProperties
 	UPROPERTY(EditDefaultsOnly, Category="Animation")
 	float WeightScale = 1.f;
 
-	UPROPERTY(EditDefaultsOnly, Category="Animation")
+	UPROPERTY(EditAnywhere, Category="Animation")
 	FTransform CustomOffsetTransform;
 
 	UPROPERTY(EditDefaultsOnly, Category="Animation")
@@ -136,7 +136,7 @@ struct FWeaponAnimProperties
 	UPROPERTY(EditDefaultsOnly, Category="Animation")
 	class UCurveFloat* AimingCurve;
 
-	UPROPERTY(EditDefaultsOnly, Category="Animation")
+	UPROPERTY(EditDefaultsOnly, Category="Animation|Recoil")
 	FRecoilParams RecoilParams;
 
 	UPROPERTY(EditDefaultsOnly, Category="Animation")
@@ -384,13 +384,13 @@ protected:
 	UPROPERTY(Transient, ReplicatedUsing=OnRep_MyPawn)
 	class ACharacter* MyPawn;
 
-	/** weapon anim properties */
-	UPROPERTY(EditDefaultsOnly, Category="Config", meta = (DisplayPriority = "1"))
-	FWeaponAnimProperties WeaponAnimProperties;
-
 	/** weapon data */
-	UPROPERTY(EditDefaultsOnly, Category="Config")
+	UPROPERTY(EditDefaultsOnly, Category="Config", meta = (DisplayPriority = "1"))
 	FWeaponData WeaponConfig;
+
+	/** weapon anim properties */
+	UPROPERTY(EditDefaultsOnly, Category="Config")
+	FWeaponAnimProperties WeaponAnimProperties;
 
 private:
 	
@@ -409,11 +409,11 @@ protected:
 	UAudioComponent* FireAC;
 
 	/** name of bone/socket for muzzle in weapon mesh */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Effects")
+	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Muzzle")
 	FName MuzzleAttachPoint;
 
 	/** FX for muzzle flash */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Effects")
+	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Muzzle")
 	UParticleSystem* MuzzleFX;
 
 	/** spawned component for muzzle FX */
@@ -423,6 +423,50 @@ protected:
 	/** spawned component for second muzzle FX (Needed for split screen) */
 	UPROPERTY(Transient)
 	UParticleSystemComponent* MuzzlePSCSecondary;
+
+	/** niagara FX for muzzle flash */
+	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Muzzle")
+	TSoftObjectPtr<UNiagaraSystem> NiagaraMuzzleFX;
+
+	/** niagara param name for muzzle flash trigger */
+	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Muzzle")
+	FName NiagaraMuzzleTriggerParam;
+
+	/** niagara spawned component for muzzle FX */
+	UPROPERTY(Transient)
+	class UNiagaraComponent* NiagaraMuzzleNC;
+
+	/** niagara spawned component for second muzzle FX (Needed for split screen) */
+	UPROPERTY(Transient)
+	UNiagaraComponent* NiagaraMuzzleNCSecondary;
+
+	/** niagara FX for shell eject */
+	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Shell")
+	TSoftObjectPtr<UNiagaraSystem> NiagaraShellFX;
+
+	/** shell eject mesh */
+	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Shell")
+	TSoftObjectPtr<UStaticMesh> ShellMesh;
+
+	/** shell eject socket name */
+	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Shell")
+	FName ShellEjectSocketName;
+
+	/** niagara param name for shell eject trigger */
+	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Shell")
+	FName NiagaraShellTriggerParam;
+
+	/** niagara param name for shell eject mesh */
+	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Shell")
+	FName NiagaraShellMeshParam;
+
+	/** niagara spawned component for shell FX */
+	UPROPERTY(Transient)
+	class UNiagaraComponent* NiagaraShellNC;
+
+	/** niagara spawned component for second shell FX (Needed for split screen) */
+	UPROPERTY(Transient)
+	UNiagaraComponent* NiagaraShellNCSecondary;
 
 	/** camera shake on firing */
 	UPROPERTY(EditDefaultsOnly, Category="Config|Effects")
@@ -434,36 +478,36 @@ protected:
 
 	/** The amount of recoil to apply. We choose a random point from 0-1 on the curve and use it to drive recoil.
 	This means designers get lots of control over the recoil pattern*/
-	UPROPERTY(EditDefaultsOnly, Category = "Config|Effects")
+	UPROPERTY(EditDefaultsOnly, Category = "Config|Effects|Recoil")
 	class UCurveVector* RecoilCurve;
 
 	// the speed at which the recoil bumps up per second
-	UPROPERTY(EditDefaultsOnly, Category = "Config|Effects")
+	UPROPERTY(EditDefaultsOnly, Category = "Config|Effects|Recoil")
 	float RecoilSpeed;
 
 	// the speed at which the recoil resets per second
-	UPROPERTY(EditDefaultsOnly, Category = "Config|Effects")
+	UPROPERTY(EditDefaultsOnly, Category = "Config|Effects|Recoil")
 	float RecoilResetSpeed;
 
 	/** single fire sound (bLoopedFireSound not set) */
 	UPROPERTY(EditDefaultsOnly, Category="Config|Sound")
-	USoundCue* FireSound;
+	USoundBase* FireSound;
 
 	/** looped fire sound (bLoopedFireSound set) */
 	UPROPERTY(EditDefaultsOnly, Category="Config|Sound")
-	USoundCue* FireLoopSound;
+	USoundBase* FireLoopSound;
 
 	/** finished burst sound (bLoopedFireSound set) */
 	UPROPERTY(EditDefaultsOnly, Category="Config|Sound")
-	USoundCue* FireFinishSound;
+	USoundBase* FireFinishSound;
 
 	/** out of ammo sound */
 	UPROPERTY(EditDefaultsOnly, Category="Config|Sound")
-	USoundCue* OutOfAmmoSound;
+	USoundBase* OutOfAmmoSound;
 
 	/** reload sound */
 	UPROPERTY(EditDefaultsOnly, Category="Config|Sound")
-	USoundCue* ReloadSound;
+	USoundBase* ReloadSound;
 
 	/** reload animations */
 	UPROPERTY(EditDefaultsOnly, Category="Config|Animation")
@@ -471,7 +515,7 @@ protected:
 
 	/** equip sound */
 	UPROPERTY(EditDefaultsOnly, Category="Config|Sound")
-	USoundCue* EquipSound;
+	USoundBase* EquipSound;
 
 	/** equip animations */
 	UPROPERTY(EditDefaultsOnly, Category="Config|Animation")
@@ -482,8 +526,12 @@ protected:
 	FWeaponAnim FireAnim;
 
 	/** is muzzle FX looped? */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Effects")
+	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Muzzle")
 	uint32 bLoopedMuzzleFX : 1;
+
+	/** is muzzle FX looped? */
+	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Shell")
+	uint32 bLoopedShellFX : 1;
 
 	/** is fire sound looped? */
 	UPROPERTY(EditDefaultsOnly, Category="Config|Sound")
@@ -654,7 +702,7 @@ protected:
 	// Weapon usage helpers
 
 	/** play weapon sounds */
-	UAudioComponent* PlayWeaponSound(USoundCue* Sound);
+	UAudioComponent* PlayWeaponSound(USoundBase* Sound);
 
 	/** play weapon animations */
 	float PlayWeaponAnimation(const FWeaponAnim& Animation);
@@ -713,7 +761,14 @@ public:
 
 	FWeaponAnimProperties GetAnimProperties() const { return WeaponAnimProperties; }
 
-	float GetWallOffsetTransformAlpha() const;
+	FORCEINLINE float GetWallOffsetTransformAlpha() const { return WallOffsetTransformAlpha; }
+
+protected:
+	
+	float CalculateWallOffsetTransformAlpha() const;
+
+	UPROPERTY(Transient)
+	float WallOffsetTransformAlpha = 0.f;
 
 	//////////////////////////////////////////////////////////////////////////
 	// Debug

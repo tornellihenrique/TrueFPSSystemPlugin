@@ -3,6 +3,9 @@
 
 #include "Effects/TrueFPSImpactEffect.h"
 
+#include "NiagaraComponent.h"
+#include "NiagaraDataInterfaceArrayFunctionLibrary.h"
+#include "NiagaraFunctionLibrary.h"
 #include "ParticleDefinitions.h"
 #include "SoundDefinitions.h"
 #include "Kismet/GameplayStatics.h"
@@ -28,8 +31,25 @@ void ATrueFPSImpactEffect::PostInitializeComponents()
 		UGameplayStatics::SpawnEmitterAtLocation(this, ImpactFX, GetActorLocation(), GetActorRotation());
 	}
 
+	// show niagara particles
+	TSoftObjectPtr<UNiagaraSystem> NiagaraImpactFX = GetNiagaraImpactFX(HitSurfaceType);
+	if (NiagaraImpactFX.LoadSynchronous())
+	{
+		UNiagaraComponent* NiagaraImpactNC = UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, NiagaraImpactFX.Get(), GetActorLocation(), GetActorRotation());
+
+		TArray<FVector> PositionArray;
+		PositionArray.Add(SurfaceHit.ImpactPoint);
+		// PositionArray.Add(GetActorLocation());
+		UNiagaraDataInterfaceArrayFunctionLibrary::SetNiagaraArrayPosition(NiagaraImpactNC, NiagaraImpactFXPositionsParam, PositionArray);
+
+		TArray<FVector> NormalArray;
+		NormalArray.Add(SurfaceHit.ImpactNormal);
+		// NormalArray.Add(GetActorRotation().Vector());
+		UNiagaraDataInterfaceArrayFunctionLibrary::SetNiagaraArrayVector(NiagaraImpactNC, NiagaraImpactFXNormalsParam, NormalArray);
+	}
+
 	// play sound
-	USoundCue* ImpactSound = GetImpactSound(HitSurfaceType);
+	USoundBase* ImpactSound = GetImpactSound(HitSurfaceType);
 	if (ImpactSound)
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, ImpactSound, GetActorLocation());
@@ -44,6 +64,31 @@ void ATrueFPSImpactEffect::PostInitializeComponents()
 			SurfaceHit.Component.Get(), SurfaceHit.BoneName,
 			SurfaceHit.ImpactPoint, RandomDecalRotation, EAttachLocation::KeepWorldPosition,
 			DefaultDecal.LifeSpan);
+	}
+
+	// show niagara particles
+	TSoftObjectPtr<UNiagaraSystem> NiagaraDecal = GetNiagaraDecal(HitSurfaceType);
+	if (NiagaraDecal.LoadSynchronous())
+	{
+		UNiagaraComponent* NiagaraDecalNC = UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, NiagaraDecal.Get(), FVector(ForceInitToZero), FRotator::ZeroRotator);
+
+		NiagaraDecalNC->SetNiagaraVariableBool(NiagaraDecalTriggerParam.ToString(), true);
+
+		TArray<int32> SurfaceTypeArray;
+		SurfaceTypeArray.Add(HitSurfaceType);
+		UNiagaraDataInterfaceArrayFunctionLibrary::SetNiagaraArrayInt32(NiagaraDecalNC, NiagaraDecalSurfacesParam, SurfaceTypeArray);
+
+		// NiagaraDecalNC->SetNiagaraVariableInt(NiagaraDecalSurfaceParam.ToString(), 0);
+
+		TArray<FVector> PositionArray;
+		PositionArray.Add(SurfaceHit.ImpactPoint);
+		// PositionArray.Add(GetActorLocation());
+		UNiagaraDataInterfaceArrayFunctionLibrary::SetNiagaraArrayPosition(NiagaraDecalNC, NiagaraDecalPositionsParam, PositionArray);
+
+		TArray<FVector> NormalArray;
+		NormalArray.Add(SurfaceHit.ImpactNormal);
+		// NormalArray.Add(GetActorRotation().Vector());
+		UNiagaraDataInterfaceArrayFunctionLibrary::SetNiagaraArrayVector(NiagaraDecalNC, NiagaraDecalNormalsParam, NormalArray);
 	}
 }
 
@@ -67,9 +112,49 @@ UParticleSystem* ATrueFPSImpactEffect::GetImpactFX(TEnumAsByte<EPhysicalSurface>
 	return ImpactFX;
 }
 
-USoundCue* ATrueFPSImpactEffect::GetImpactSound(TEnumAsByte<EPhysicalSurface> SurfaceType) const
+TSoftObjectPtr<UNiagaraSystem> ATrueFPSImpactEffect::GetNiagaraImpactFX(TEnumAsByte<EPhysicalSurface> SurfaceType) const
 {
-	USoundCue* ImpactSound = nullptr;
+	TSoftObjectPtr<UNiagaraSystem> ImpactFX;
+
+	switch (SurfaceType)
+	{
+		case TRUEFPS_SURFACE_Concrete:	ImpactFX = NiagaraConcreteFX; break;
+		case TRUEFPS_SURFACE_Dirt:		ImpactFX = NiagaraDirtFX; break;
+		case TRUEFPS_SURFACE_Water:		ImpactFX = NiagaraWaterFX; break;
+		case TRUEFPS_SURFACE_Metal:		ImpactFX = NiagaraMetalFX; break;
+		case TRUEFPS_SURFACE_Wood:		ImpactFX = NiagaraWoodFX; break;
+		case TRUEFPS_SURFACE_Grass:		ImpactFX = NiagaraGrassFX; break;
+		case TRUEFPS_SURFACE_Glass:		ImpactFX = NiagaraGlassFX; break;
+		case TRUEFPS_SURFACE_Flesh:		ImpactFX = NiagaraFleshFX; break;
+		default:						ImpactFX = NiagaraDefaultFX; break;
+	}
+
+	return ImpactFX;
+}
+
+TSoftObjectPtr<UNiagaraSystem> ATrueFPSImpactEffect::GetNiagaraDecal(TEnumAsByte<EPhysicalSurface> SurfaceType) const
+{
+	TSoftObjectPtr<UNiagaraSystem> ImpactFX;
+
+	switch (SurfaceType)
+	{
+		case TRUEFPS_SURFACE_Concrete:	ImpactFX = NiagaraConcreteDecal; break;
+		case TRUEFPS_SURFACE_Dirt:		ImpactFX = NiagaraDirtDecal; break;
+		case TRUEFPS_SURFACE_Water:		ImpactFX = NiagaraWaterDecal; break;
+		case TRUEFPS_SURFACE_Metal:		ImpactFX = NiagaraMetalDecal; break;
+		case TRUEFPS_SURFACE_Wood:		ImpactFX = NiagaraWoodDecal; break;
+		case TRUEFPS_SURFACE_Grass:		ImpactFX = NiagaraGrassDecal; break;
+		case TRUEFPS_SURFACE_Glass:		ImpactFX = NiagaraGlassDecal; break;
+		case TRUEFPS_SURFACE_Flesh:		ImpactFX = NiagaraFleshDecal; break;
+		default:						ImpactFX = NiagaraDefaultDecal; break;
+	}
+
+	return ImpactFX;
+}
+
+USoundBase* ATrueFPSImpactEffect::GetImpactSound(TEnumAsByte<EPhysicalSurface> SurfaceType) const
+{
+	USoundBase* ImpactSound = nullptr;
 
 	switch (SurfaceType)
 	{

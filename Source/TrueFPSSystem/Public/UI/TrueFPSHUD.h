@@ -152,6 +152,27 @@ virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	/* Is the match over (IE Is the state Won or Lost). */
 	bool IsMatchOver() const;
+
+	/** 
+	 * Set if should draw death messages
+	 *
+	 * @param	bValue	The new value.
+	 */
+	FORCEINLINE void SetShouldDrawDeathMessages( const bool bValue ) { bShouldDrawDeathMessages = bValue; }
+
+	/** 
+	 * Set if should draw match time
+	 *
+	 * @param	bValue	The new value.
+	 */
+	FORCEINLINE void SetShouldDrawMatchTime( const bool bValue ) { bShouldDrawMatchTime = bValue; }
+
+	/** 
+	 * Set if should draw kills
+	 *
+	 * @param	bValue	The new value.
+	 */
+	FORCEINLINE void SetShouldDrawKills( const bool bValue ) { bShouldDrawKills = bValue; }
 		
 protected:
 	
@@ -190,6 +211,15 @@ protected:
 
 	/** How long till enemy hit notify fades out completely. */
 	float LastEnemyHitDisplayTime;
+
+	/** If should draw death messages. */
+	bool bShouldDrawDeathMessages;
+
+	/** If should draw match time. */
+	bool bShouldDrawMatchTime;
+
+	/** If should draw kills. */
+	bool bShouldDrawKills;
 
 	/** Icons for hit indicator. */
 	UPROPERTY()

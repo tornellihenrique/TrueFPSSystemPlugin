@@ -105,7 +105,7 @@ protected:
 	}
 
 	/** weapon config */
-	UPROPERTY(EditDefaultsOnly, Category="Config", meta = (DisplayAfter = "WeaponConfig"))
+	UPROPERTY(EditDefaultsOnly, Category="Config")
 	FInstantWeaponData InstantConfig;
 
 	/** impact effects */
@@ -113,12 +113,24 @@ protected:
 	TSubclassOf<class ATrueFPSImpactEffect> ImpactTemplate;
 
 	/** smoke trail */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Effects")
+	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Trail")
 	UParticleSystem* TrailFX;
 
 	/** param name for beam target in smoke trail */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Effects")
+	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Trail")
 	FName TrailTargetParam;
+
+	/** niagara smoke trail */
+	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Trail")
+	TSoftObjectPtr<UNiagaraSystem> NiagaraTrailFX;
+
+	/** niagara param name for beam target in smoke trail */
+	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Trail")
+	FName NiagaraTrailTargetParam;
+
+	/** niagara param name for beam trigger in smoke trail */
+	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Trail")
+	FName NiagaraTrailTriggerParam;
 
 	/** instant hit notify for replication */
 	UPROPERTY(Transient, ReplicatedUsing=OnRep_HitNotify)

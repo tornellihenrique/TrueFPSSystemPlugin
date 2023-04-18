@@ -3,7 +3,10 @@
 
 #include "Weapons/TrueFPSWeaponInstant.h"
 
-#include "TrueFPSSystem.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
+#include "NiagaraComponent.h"
+#include "NiagaraDataInterfaceArrayFunctionLibrary.h"
 #include "GameFramework/Character.h"
 #include "Character/TrueFPSCharacterInterface.h"
 #include "Effects/TrueFPSImpactEffect.h"
@@ -292,6 +295,22 @@ void ATrueFPSWeaponInstant::SpawnTrailEffect(const FVector& EndPoint)
 		if (TrailPSC)
 		{
 			TrailPSC->SetVectorParameter(TrailTargetParam, EndPoint);
+		}
+	}
+
+	if (NiagaraTrailFX.LoadSynchronous())
+	{
+		const FVector Origin = GetMuzzleLocation();
+		const FRotator OriginRotation = GetMuzzleDirection().Rotation();
+
+		UNiagaraComponent* TrailNC = UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, NiagaraTrailFX.Get(), Origin, OriginRotation);
+		if (TrailNC)
+		{
+			TrailNC->SetNiagaraVariableBool(NiagaraTrailTriggerParam.ToString(), true);
+
+			TArray<FVector> EndPoints;
+			EndPoints.Add(EndPoint);
+			UNiagaraDataInterfaceArrayFunctionLibrary::SetNiagaraArrayVector(TrailNC, NiagaraTrailTargetParam, EndPoints);
 		}
 	}
 }

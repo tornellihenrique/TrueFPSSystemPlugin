@@ -28,7 +28,7 @@ public:
 
 	void Construct(const FArguments& InArgs)
 	{
-		static const FName LoadingScreenName(TEXT("/Game/UI/Menu/LoadingScreen.LoadingScreen"));
+		static const FName LoadingScreenName(TEXT("/TrueFPSSystemPlugin/UI/Menu/LoadingScreen.LoadingScreen"));
 
 		//since we are not using game styles here, just load one image
 		LoadingScreenBrush = MakeShareable( new FTrueFPSSystemLoadingScreenBrush( LoadingScreenName, FVector2D(1920,1080) ) );
@@ -76,7 +76,7 @@ public:
 	virtual void StartupModule() override
 	{		
 		// Load for cooker reference
-		LoadObject<UObject>(NULL, TEXT("/Game/UI/Menu/LoadingScreen.LoadingScreen") );
+		LoadObject<UObject>(NULL, TEXT("/TrueFPSSystemPlugin/UI/Menu/LoadingScreen.LoadingScreen") );
 
 
 		// Previously, we set up our startup movie here to play while the engine was initially loading. By removing this behavior, 
