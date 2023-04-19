@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Weapons/TrueFPSWeaponProjectile.h"
+#include "Weapons/TrueFPSFireWeaponProjectile.h"
 #include "TrueFPSProjectile.generated.h"
 
 class UProjectileMovementComponent;

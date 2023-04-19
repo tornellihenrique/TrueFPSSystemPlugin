@@ -3,9 +3,6 @@
 
 #include "Weapons/TrueFPSWeaponBase.h"
 
-#include "NiagaraComponent.h"
-#include "NiagaraFunctionLibrary.h"
-#include "NiagaraSystem.h"
 #include "TrueFPSSystem.h"
 #include "Character/TrueFPSCharacterInterface.h"
 #include "GameFramework/Character.h"
@@ -15,8 +12,6 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Net/UnrealNetwork.h"
-#include "Particles/ParticleSystemComponent.h"
-#include "Sound/SoundCue.h"
 #include "Weapons/Attachments/TrueFPSSightsAttachment.h"
 #include "Weapons/Attachments/TrueFPSWeaponAttachmentBase.h"
 #include "Weapons/Attachments/TrueFPSWeaponAttachmentPoint.h"
@@ -44,17 +39,12 @@ ATrueFPSWeaponBase::ATrueFPSWeaponBase(const FObjectInitializer& ObjectInitializ
 	Mesh3P->SetCollisionResponseToChannel(COLLISION_PROJECTILE, ECR_Block);
 	Mesh3P->SetupAttachment(Mesh1P);
 
-	bLoopedMuzzleFX = false;
 	bLoopedFireAnim = false;
 	bPlayingFireAnim = false;
 	bIsEquipped = false;
 	bWantsToFire = false;
-	bPendingReload = false;
 	bPendingEquip = false;
 	CurrentState = EWeaponState::Idle;
-
-	CurrentAmmo = 0;
-	CurrentAmmoInClip = 0;
 	BurstCounter = 0;
 	LastFireTime = 0.0f;
 	
@@ -108,12 +98,6 @@ void ATrueFPSWeaponBase::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 
-	if (WeaponConfig.InitialClips > 0)
-	{
-		CurrentAmmoInClip = WeaponConfig.AmmoPerClip;
-		CurrentAmmo = WeaponConfig.AmmoPerClip * WeaponConfig.InitialClips;
-	}
-
 	DetachMeshFromPawn();
 }
 
@@ -131,39 +115,7 @@ void ATrueFPSWeaponBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	DOREPLIFETIME( ThisClass, MyPawn );
 	DOREPLIFETIME( ThisClass, TargetSightsRelativeTransform );
 
-	DOREPLIFETIME_CONDITION( ThisClass, CurrentAmmo, COND_OwnerOnly );
-	DOREPLIFETIME_CONDITION( ThisClass, CurrentAmmoInClip, COND_OwnerOnly );
-
 	DOREPLIFETIME_CONDITION( ThisClass, BurstCounter, COND_SkipOwner );
-	DOREPLIFETIME_CONDITION( ThisClass, bPendingReload,	COND_SkipOwner );
-}
-
-void ATrueFPSWeaponBase::GiveAmmo(int AddAmount)
-{
-	const int32 MissingAmmo = FMath::Max(0, WeaponConfig.MaxAmmo - CurrentAmmo);
-	AddAmount = FMath::Min(AddAmount, MissingAmmo);
-	CurrentAmmo += AddAmount;
-	
-	// start reload if clip was empty
-	if (GetCurrentAmmoInClip() <= 0 &&
-		CanReload() &&
-		MyPawn && MyPawn->Implements<UTrueFPSCharacterInterface>() && (ITrueFPSCharacterInterface::Execute_GetCurrentWeapon(MyPawn) == this))
-	{
-		ClientStartReload();
-	}
-}
-
-void ATrueFPSWeaponBase::UseAmmo()
-{
-	if (!HasInfiniteAmmo())
-	{
-		CurrentAmmoInClip--;
-	}
-
-	if (!HasInfiniteAmmo() && !HasInfiniteClip())
-	{
-		CurrentAmmo--;
-	}
 }
 
 void ATrueFPSWeaponBase::OnEquip(const ATrueFPSWeaponBase* LastWeapon)
@@ -207,17 +159,6 @@ void ATrueFPSWeaponBase::OnEquipFinished()
 
 	// Determine the state so that the can reload checks will work
 	DetermineWeaponState(); 
-	
-	if (MyPawn)
-	{
-		// try to reload empty clip
-		if (MyPawn->IsLocallyControlled() &&
-			CurrentAmmoInClip <= 0 &&
-			CanReload())
-		{
-			StartReload();
-		}
-	}
 }
 
 void ATrueFPSWeaponBase::OnUnEquip()
@@ -225,15 +166,6 @@ void ATrueFPSWeaponBase::OnUnEquip()
 	DetachMeshFromPawn();
 	bIsEquipped = false;
 	StopFire();
-
-	if (bPendingReload)
-	{
-		StopWeaponAnimation(ReloadAnim);
-		bPendingReload = false;
-
-		GetWorldTimerManager().ClearTimer(TimerHandle_StopReload);
-		GetWorldTimerManager().ClearTimer(TimerHandle_ReloadWeapon);
-	}
 
 	if (bPendingEquip)
 	{
@@ -302,72 +234,6 @@ void ATrueFPSWeaponBase::StopFire()
 	}
 }
 
-void ATrueFPSWeaponBase::StartReload(bool bFromReplication)
-{
-	if (!bFromReplication && GetLocalRole() < ROLE_Authority)
-	{
-		ServerStartReload();
-	}
-
-	if (bFromReplication || CanReload())
-	{
-		bPendingReload = true;
-		DetermineWeaponState();
-
-		float AnimDuration = PlayWeaponAnimation(ReloadAnim);		
-		if (AnimDuration <= 0.0f)
-		{
-			AnimDuration = WeaponConfig.NoAnimReloadDuration;
-		}
-
-		GetWorldTimerManager().SetTimer(TimerHandle_StopReload, this, &ThisClass::StopReload, AnimDuration, false);
-		if (GetLocalRole() == ROLE_Authority)
-		{
-			GetWorldTimerManager().SetTimer(TimerHandle_ReloadWeapon, this, &ThisClass::ReloadWeapon, FMath::Max(0.1f, AnimDuration - 0.1f), false);
-		}
-		
-		if (MyPawn && MyPawn->IsLocallyControlled())
-		{
-			PlayWeaponSound(ReloadSound);
-		}
-	}
-}
-
-void ATrueFPSWeaponBase::StopReload()
-{
-	if (CurrentState == EWeaponState::Reloading)
-	{
-		bPendingReload = false;
-		DetermineWeaponState();
-		StopWeaponAnimation(ReloadAnim);
-	}
-}
-
-void ATrueFPSWeaponBase::ReloadWeapon()
-{
-	int32 ClipDelta = FMath::Min(WeaponConfig.AmmoPerClip - CurrentAmmoInClip, CurrentAmmo - CurrentAmmoInClip);
-
-	if (HasInfiniteClip())
-	{
-		ClipDelta = WeaponConfig.AmmoPerClip - CurrentAmmoInClip;
-	}
-
-	if (ClipDelta > 0)
-	{
-		CurrentAmmoInClip += ClipDelta;
-	}
-
-	if (HasInfiniteClip())
-	{
-		CurrentAmmo = FMath::Max(CurrentAmmoInClip, CurrentAmmo);
-	}
-}
-
-void ATrueFPSWeaponBase::ClientStartReload_Implementation()
-{
-	StartReload();
-}
-
 void ATrueFPSWeaponBase::ToggleSights()
 {
 	if (GetLocalRole() < ROLE_Authority)
@@ -397,15 +263,7 @@ bool ATrueFPSWeaponBase::CanFire() const
 {
 	bool bCanFire = MyPawn && MyPawn->Implements<UTrueFPSCharacterInterface>() && ITrueFPSCharacterInterface::Execute_CanFire(MyPawn);
 	bool bStateOKToFire = ( ( CurrentState ==  EWeaponState::Idle ) || ( CurrentState == EWeaponState::Firing) );	
-	return (( bCanFire == true ) && ( bStateOKToFire == true ) && ( bPendingReload == false ));
-}
-
-bool ATrueFPSWeaponBase::CanReload() const
-{
-	bool bCanReload = (!MyPawn || (MyPawn && MyPawn->Implements<UTrueFPSCharacterInterface>() && ITrueFPSCharacterInterface::Execute_CanReload(MyPawn)));
-	bool bGotAmmo = (CurrentAmmoInClip < WeaponConfig.AmmoPerClip) && (CurrentAmmo - CurrentAmmoInClip > 0 || HasInfiniteClip());
-	bool bStateOKToReload = ((CurrentState == EWeaponState::Idle) || (CurrentState == EWeaponState::Firing));
-	return ((bCanReload == true) && (bGotAmmo == true) && (bStateOKToReload == true));	
+	return (( bCanFire == true ) && ( bStateOKToFire == true ));
 }
 
 bool ATrueFPSWeaponBase::CanAim() const
@@ -420,26 +278,6 @@ EWeaponState::Type ATrueFPSWeaponBase::GetCurrentState() const
 	return CurrentState;
 }
 
-int32 ATrueFPSWeaponBase::GetCurrentAmmo() const
-{
-	return CurrentAmmo;
-}
-
-int32 ATrueFPSWeaponBase::GetCurrentAmmoInClip() const
-{
-	return CurrentAmmoInClip;
-}
-
-int32 ATrueFPSWeaponBase::GetAmmoPerClip() const
-{
-	return WeaponConfig.AmmoPerClip;
-}
-
-int32 ATrueFPSWeaponBase::GetMaxAmmo() const
-{
-	return WeaponConfig.MaxAmmo;
-}
-
 USkeletalMeshComponent* ATrueFPSWeaponBase::GetWeaponMesh() const
 {
 	// return (MyPawn != nullptr && IsFirstPerson()) ? Mesh1P : Mesh3P;
@@ -451,16 +289,6 @@ bool ATrueFPSWeaponBase::IsFirstPerson() const
 	if (!MyPawn) return false;
 	if (!MyPawn->Implements<UTrueFPSCharacterInterface>()) return false;
 	return ITrueFPSCharacterInterface::Execute_IsFirstPerson(MyPawn);
-}
-
-bool ATrueFPSWeaponBase::HasInfiniteAmmo() const
-{
-	return WeaponConfig.bInfiniteAmmo;
-}
-
-bool ATrueFPSWeaponBase::HasInfiniteClip() const
-{
-	return WeaponConfig.bInfiniteClip;
 }
 
 void ATrueFPSWeaponBase::SetOwningPawn(ACharacter* NewOwner)
@@ -534,16 +362,6 @@ void ATrueFPSWeaponBase::ServerStopFire_Implementation()
 	StopFire();
 }
 
-void ATrueFPSWeaponBase::ServerStartReload_Implementation()
-{
-	StartReload();
-}
-
-void ATrueFPSWeaponBase::ServerStopReload_Implementation()
-{
-	StopReload();
-}
-
 void ATrueFPSWeaponBase::ServerToggleSights_Implementation()
 {
 	ToggleSights();
@@ -573,115 +391,11 @@ void ATrueFPSWeaponBase::OnRep_BurstCounter()
 	}
 }
 
-void ATrueFPSWeaponBase::OnRep_Reload()
-{
-	if (bPendingReload)
-	{
-		StartReload(true);
-	}
-	else
-	{
-		StopReload();
-	}
-}
-
 void ATrueFPSWeaponBase::SimulateWeaponFire()
 {
 	if (GetLocalRole() == ROLE_Authority && CurrentState != EWeaponState::Firing)
 	{
 		return;
-	}
-
-	if (MuzzleFX)
-	{
-		USkeletalMeshComponent* UseWeaponMesh = GetWeaponMesh();
-		if (!bLoopedMuzzleFX || MuzzlePSC == nullptr)
-		{
-			// Split screen requires we create 2 effects. One that we see and one that the other player sees.
-			if( (MyPawn != nullptr ) && ( MyPawn->IsLocallyControlled() == true ) )
-			{
-				AController* PlayerCon = MyPawn->GetController();				
-				if( PlayerCon != nullptr )
-				{
-					// Mesh1P->GetSocketLocation(MuzzleAttachPoint);
-					MuzzlePSC = UGameplayStatics::SpawnEmitterAttached(MuzzleFX, Mesh1P, MuzzleAttachPoint);
-					MuzzlePSC->bOwnerNoSee = false;
-					MuzzlePSC->bOnlyOwnerSee = true;
-
-					// Mesh3P->GetSocketLocation(MuzzleAttachPoint);
-					MuzzlePSCSecondary = UGameplayStatics::SpawnEmitterAttached(MuzzleFX, Mesh3P, MuzzleAttachPoint);
-					MuzzlePSCSecondary->bOwnerNoSee = true;
-					MuzzlePSCSecondary->bOnlyOwnerSee = false;				
-				}				
-			}
-			else
-			{
-				MuzzlePSC = UGameplayStatics::SpawnEmitterAttached(MuzzleFX, UseWeaponMesh, MuzzleAttachPoint);
-			}
-		}
-	}
-
-	if (NiagaraMuzzleFX.LoadSynchronous())
-	{
-		USkeletalMeshComponent* UseWeaponMesh = GetWeaponMesh();
-		if (!bLoopedMuzzleFX || NiagaraMuzzleNC == nullptr)
-		{
-			// Split screen requires we create 2 effects. One that we see and one that the other player sees.
-			if( (MyPawn != nullptr ) && ( MyPawn->IsLocallyControlled() == true ) )
-			{
-				AController* PlayerCon = MyPawn->GetController();				
-				if( PlayerCon != nullptr )
-				{
-					NiagaraMuzzleNC = UNiagaraFunctionLibrary::SpawnSystemAttached(NiagaraMuzzleFX.Get(), Mesh1P, MuzzleAttachPoint, FVector(ForceInit), FRotator::ZeroRotator, EAttachLocation::KeepRelativeOffset, true);
-					NiagaraMuzzleNC->bOwnerNoSee = false;
-					NiagaraMuzzleNC->bOnlyOwnerSee = true;
-					NiagaraMuzzleNC->SetNiagaraVariableBool(NiagaraMuzzleTriggerParam.ToString(), true);
-
-					NiagaraMuzzleNCSecondary = UNiagaraFunctionLibrary::SpawnSystemAttached(NiagaraMuzzleFX.Get(), Mesh3P, MuzzleAttachPoint, FVector(ForceInit), FRotator::ZeroRotator, EAttachLocation::KeepRelativeOffset, true);
-					NiagaraMuzzleNCSecondary->bOwnerNoSee = true;
-					NiagaraMuzzleNCSecondary->bOnlyOwnerSee = false;
-					NiagaraMuzzleNCSecondary->SetNiagaraVariableBool(NiagaraMuzzleTriggerParam.ToString(), true);
-				}				
-			}
-			else
-			{
-				NiagaraMuzzleNC = UNiagaraFunctionLibrary::SpawnSystemAttached(NiagaraMuzzleFX.Get(), UseWeaponMesh, MuzzleAttachPoint, FVector(ForceInit), FRotator::ZeroRotator, EAttachLocation::KeepRelativeOffset, true);
-				NiagaraMuzzleNC->SetNiagaraVariableBool(NiagaraMuzzleTriggerParam.ToString(), true);
-			}
-		}
-	}
-
-	if (NiagaraShellFX.LoadSynchronous() && ShellMesh.LoadSynchronous())
-	{
-		USkeletalMeshComponent* UseWeaponMesh = GetWeaponMesh();
-		if (!bLoopedShellFX || NiagaraShellNC == nullptr)
-		{
-			// Split screen requires we create 2 effects. One that we see and one that the other player sees.
-			if( (MyPawn != nullptr ) && ( MyPawn->IsLocallyControlled() == true ) )
-			{
-				AController* PlayerCon = MyPawn->GetController();				
-				if( PlayerCon != nullptr )
-				{
-					NiagaraShellNC = UNiagaraFunctionLibrary::SpawnSystemAttached(NiagaraShellFX.Get(), Mesh1P, NAME_None, Mesh1P->GetSocketTransform(ShellEjectSocketName, RTS_Actor).GetLocation(), FRotator(0.f, 90.f, 0.f), EAttachLocation::KeepRelativeOffset, true);
-					NiagaraShellNC->bOwnerNoSee = false;
-					NiagaraShellNC->bOnlyOwnerSee = true;
-					NiagaraShellNC->SetNiagaraVariableBool(NiagaraShellTriggerParam.ToString(), true);
-					NiagaraShellNC->SetVariableStaticMesh(NiagaraShellMeshParam, ShellMesh.Get());
-
-					NiagaraShellNCSecondary = UNiagaraFunctionLibrary::SpawnSystemAttached(NiagaraShellFX.Get(), Mesh3P, NAME_None, Mesh3P->GetSocketTransform(ShellEjectSocketName, RTS_Actor).GetLocation(), FRotator(0.f, 90.f, 0.f), EAttachLocation::KeepRelativeOffset, true);
-					NiagaraShellNCSecondary->bOwnerNoSee = true;
-					NiagaraShellNCSecondary->bOnlyOwnerSee = false;
-					NiagaraShellNCSecondary->SetNiagaraVariableBool(NiagaraShellTriggerParam.ToString(), true);
-					NiagaraShellNCSecondary->SetVariableStaticMesh(NiagaraShellMeshParam, ShellMesh.Get());
-				}				
-			}
-			else
-			{
-				NiagaraShellNC = UNiagaraFunctionLibrary::SpawnSystemAttached(NiagaraShellFX.Get(), UseWeaponMesh, NAME_None, UseWeaponMesh->GetSocketTransform(ShellEjectSocketName, RTS_Actor).GetLocation(), FRotator(0.f, 90.f, 0.f), EAttachLocation::KeepRelativeOffset, true);
-				NiagaraShellNC->SetNiagaraVariableBool(NiagaraShellTriggerParam.ToString(), true);
-				NiagaraShellNC->SetVariableStaticMesh(NiagaraShellMeshParam, ShellMesh.Get());
-			}
-		}
 	}
 
 	if (!bLoopedFireAnim || !bPlayingFireAnim)
@@ -730,20 +444,6 @@ void ATrueFPSWeaponBase::SimulateWeaponFire()
 
 void ATrueFPSWeaponBase::StopSimulatingWeaponFire()
 {
-	if (bLoopedMuzzleFX )
-	{
-		if( MuzzlePSC != nullptr)
-		{
-			MuzzlePSC->DeactivateSystem();
-			MuzzlePSC = nullptr;
-		}
-		if( MuzzlePSCSecondary != nullptr)
-		{
-			MuzzlePSCSecondary->DeactivateSystem();
-			MuzzlePSCSecondary = nullptr;
-		}
-	}
-
 	if (bLoopedFireAnim && bPlayingFireAnim)
 	{
 		StopWeaponAnimation(FireAnim);
@@ -761,15 +461,12 @@ void ATrueFPSWeaponBase::StopSimulatingWeaponFire()
 
 void ATrueFPSWeaponBase::ServerHandleFiring_Implementation()
 {
-	const bool bShouldUpdateAmmo = (CurrentAmmoInClip > 0 && CanFire());
+	const bool bShouldIncrementBurstCounter = CanFire();
 
 	HandleFiring();
 
-	if (bShouldUpdateAmmo)
+	if (bShouldIncrementBurstCounter)
 	{
-		// update ammo
-		UseAmmo();
-
 		// update firing FX on remote clients
 		BurstCounter++;
 	}
@@ -792,7 +489,7 @@ void ATrueFPSWeaponBase::HandleReFiring()
 
 void ATrueFPSWeaponBase::HandleFiring()
 {
-	if ((CurrentAmmoInClip > 0 || HasInfiniteClip() || HasInfiniteAmmo()) && CanFire())
+	if (CanFire())
 	{
 		if (GetNetMode() != NM_DedicatedServer)
 		{
@@ -801,35 +498,14 @@ void ATrueFPSWeaponBase::HandleFiring()
 
 		if (MyPawn && MyPawn->IsLocallyControlled())
 		{
-			if (WeaponConfig.ShotsByFiring > 1)
-			{
-				for (int32 i = 0; i < WeaponConfig.ShotsByFiring; i++)
-				{
-					FireWeapon();
-				}
-			}
-			else
-			{
-				FireWeapon();
-			}
-
-			UseAmmo();
+			FireWeapon();
 			
 			// update firing FX on remote clients if function was called on server
 			BurstCounter++;
 		}
 	}
-	else if (CanReload())
-	{
-		StartReload();
-	}
 	else if (MyPawn && MyPawn->IsLocallyControlled())
 	{
-		if (GetCurrentAmmo() == 0 && !bRefiring)
-		{
-			PlayWeaponSound(OutOfAmmoSound);
-		}
-		
 		// stop weapon fire FX, but stay in Firing state
 		if (BurstCounter > 0)
 		{
@@ -847,12 +523,6 @@ void ATrueFPSWeaponBase::HandleFiring()
 		if (GetLocalRole() < ROLE_Authority)
 		{
 			ServerHandleFiring();
-		}
-
-		// reload after firing last round
-		if (CurrentAmmoInClip <= 0 && CanReload())
-		{
-			StartReload();
 		}
 
 		// setup refire timer
@@ -923,18 +593,7 @@ void ATrueFPSWeaponBase::DetermineWeaponState()
 
 	if (bIsEquipped)
 	{
-		if( bPendingReload  )
-		{
-			if( CanReload() == false )
-			{
-				NewState = CurrentState;
-			}
-			else
-			{
-				NewState = EWeaponState::Reloading;
-			}
-		}		
-		else if ( (bPendingReload == false ) && ( bWantsToFire == true ) && ( CanFire() == true ))
+		if ( ( bWantsToFire == true ) && ( CanFire() == true ))
 		{
 			NewState = EWeaponState::Firing;
 		}
@@ -949,40 +608,6 @@ void ATrueFPSWeaponBase::DetermineWeaponState()
 
 void ATrueFPSWeaponBase::HandleRecoil(float DeltaSeconds)
 {
-	// for (int32 i = 0; i < RecoilInstances.Num(); i++)
-	// {
-	// 	FRecoilInstance& RecoilInstance = RecoilInstances[i];
-	// 	
-	// 	const float LastTime = RecoilInstance.CurrentTime;
-	// 	const float CurrentTime = RecoilInstance.CurrentTime += DeltaSeconds * RecoilInstance.PlayRate;
-	//
-	// 	// LastTime's Transform
-	// 	const FVector LastCurveRotationVector = RecoilInstance.RotationCurve->GetVectorValue(LastTime);
-	// 	FRotator LastCurveRotation(LastCurveRotationVector.Y, LastCurveRotationVector.Z, LastCurveRotationVector.X);
-	// 	FVector LastCurveLocation(RecoilInstance.LocationCurve->GetVectorValue(LastTime));
-	// 	FTransform LastValue(LastCurveRotation, LastCurveLocation);
-	//
-	// 	// CurrentTime's Transform
-	// 	const FVector CurveRotationVector = RecoilInstance.RotationCurve->GetVectorValue(CurrentTime);
-	// 	FRotator CurveRotation(CurveRotationVector.Y, CurveRotationVector.Z, CurveRotationVector.X);
-	// 	FVector CurveLocation(RecoilInstance.LocationCurve->GetVectorValue(CurrentTime));
-	// 	FTransform CurrentValue(CurveRotation, CurveLocation);
-	// 	
-	// 	// Accumulate the difference of this time's transform to last time's
-	// 	const FTransform& Difference = CurrentValue.GetRelativeTransform(LastValue);
-	// 	RecoilOffset *= Difference;
-	// 	
-	// 	if (CurrentTime >= RecoilInstance.Lifetime)
-	// 	{ // If we have surpassed the duration of the recoil curve...
-	// 		RecoilInstances.RemoveAt(i--);
-	//
-	// 		if (RecoilInstances.IsEmpty())
-	// 		{
-	// 			RecoilOffset = FTransform::Identity;
-	// 		}
-	// 	}
-	// }
-
 	for (int32 i = 0; i < RecoilInstances.Num(); i++)
 	{
 		FRecoilInstance& RecoilInstance = RecoilInstances[i];
@@ -1064,7 +689,7 @@ UAudioComponent* ATrueFPSWeaponBase::PlayWeaponSound(USoundBase* Sound)
 	UAudioComponent* AC = nullptr;
 	if (Sound && MyPawn)
 	{
-		AC = UGameplayStatics::SpawnSoundAttached(Sound, MyPawn->GetRootComponent(), MuzzleAttachPoint);
+		AC = UGameplayStatics::SpawnSoundAttached(Sound, MyPawn->GetRootComponent(), SoundsAttachPoint);
 	}
 
 	return AC;
@@ -1109,9 +734,6 @@ void ATrueFPSWeaponBase::StopWeaponAnimation(const FWeaponAnim& Animation)
 
 FVector ATrueFPSWeaponBase::GetAdjustedAim() const
 {
-	// If it's close to wall, use muzzle's rotation
-	if (IsCloseToWall()) return GetMuzzleDirection();
-	
 	APlayerController* const PlayerController = GetInstigatorController<APlayerController>();
 	FVector FinalAim = FVector::ZeroVector;
 	// If we have a player controller use it for the aim
@@ -1166,18 +788,6 @@ FVector ATrueFPSWeaponBase::GetCameraDamageStartLocation(const FVector& AimDir) 
 	}
 
 	return OutStartTrace;
-}
-
-FVector ATrueFPSWeaponBase::GetMuzzleLocation() const
-{
-	USkeletalMeshComponent* UseMesh = GetWeaponMesh();
-	return UseMesh->GetSocketLocation(MuzzleAttachPoint);
-}
-
-FVector ATrueFPSWeaponBase::GetMuzzleDirection() const
-{
-	USkeletalMeshComponent* UseMesh = GetWeaponMesh();
-	return UseMesh->GetSocketRotation(MuzzleAttachPoint).Vector();
 }
 
 FHitResult ATrueFPSWeaponBase::WeaponTrace(const FVector& StartTrace, const FVector& EndTrace) const

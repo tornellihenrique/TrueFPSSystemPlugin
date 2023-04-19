@@ -22,6 +22,7 @@
 #include "Sound/LocalPlayerSoundNode.h"
 #include "UI/TrueFPSHUD.h"
 #include "Weapons/TrueFPSDamageType.h"
+#include "Weapons/TrueFPSFireWeaponBase.h"
 
 FOnTrueFPSCharacterEquipWeapon ATrueFPSCharacter::NotifyEquipWeapon;
 FOnTrueFPSCharacterUnEquipWeapon ATrueFPSCharacter::NotifyUnEquipWeapon;
@@ -595,9 +596,9 @@ void ATrueFPSCharacter::OnPrevWeapon()
 
 void ATrueFPSCharacter::OnReload()
 {
-	if (CurrentWeapon)
+	if (ATrueFPSFireWeaponBase* CurrentFireWeapon = Cast<ATrueFPSFireWeaponBase>(CurrentWeapon))
 	{
-		CurrentWeapon->StartReload();
+		CurrentFireWeapon->StartReload();
 	}
 
 	// TODO: Implement

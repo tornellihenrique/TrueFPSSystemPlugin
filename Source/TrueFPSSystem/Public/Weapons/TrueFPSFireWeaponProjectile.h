@@ -3,8 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Weapons/TrueFPSWeaponBase.h"
-#include "TrueFPSWeaponProjectile.generated.h"
+#include "Weapons/TrueFPSFireWeaponBase.h"
+#include "TrueFPSFireWeaponProjectile.generated.h"
 
 USTRUCT(DisplayName = "Weapon Projectile")
 struct FProjectileWeaponData
@@ -46,13 +46,13 @@ struct FProjectileWeaponData
  * 
  */
 UCLASS(Abstract)
-class TRUEFPSSYSTEM_API ATrueFPSWeaponProjectile : public ATrueFPSWeaponBase
+class TRUEFPSSYSTEM_API ATrueFPSFireWeaponProjectile : public ATrueFPSFireWeaponBase
 {
 	GENERATED_BODY()
 
 public:
 
-	ATrueFPSWeaponProjectile(const FObjectInitializer& ObjectInitializer);
+	ATrueFPSFireWeaponProjectile(const FObjectInitializer& ObjectInitializer);
 
 	/** apply config on projectile */
 	void ApplyWeaponConfig(FProjectileWeaponData& Data);

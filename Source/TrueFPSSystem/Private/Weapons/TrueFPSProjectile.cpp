@@ -51,7 +51,7 @@ void ATrueFPSProjectile::PostInitializeComponents()
 	MovementComp->OnProjectileStop.AddDynamic(this, &ThisClass::OnImpact);
 	CollisionComp->MoveIgnoreActors.Add(GetInstigator());
 
-	ATrueFPSWeaponProjectile* OwnerWeapon = Cast<ATrueFPSWeaponProjectile>(GetOwner());
+	ATrueFPSFireWeaponProjectile* OwnerWeapon = Cast<ATrueFPSFireWeaponProjectile>(GetOwner());
 	if (OwnerWeapon)
 	{
 		OwnerWeapon->ApplyWeaponConfig(WeaponConfig);

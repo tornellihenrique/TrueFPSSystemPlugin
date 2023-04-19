@@ -32,48 +32,14 @@ struct FWeaponData
 {
 	GENERATED_USTRUCT_BODY()
 
-	/** inifite ammo for reloads */
-	UPROPERTY(EditDefaultsOnly, Category=Ammo)
-	bool bInfiniteAmmo;
-
-	/** infinite ammo in clip, no reload required */
-	UPROPERTY(EditDefaultsOnly, Category=Ammo)
-	bool bInfiniteClip;
-
-	/** max ammo */
-	UPROPERTY(EditDefaultsOnly, Category=Ammo)
-	int32 MaxAmmo;
-
-	/** clip size */
-	UPROPERTY(EditDefaultsOnly, Category=Ammo)
-	int32 AmmoPerClip;
-
-	/** initial clips */
-	UPROPERTY(EditDefaultsOnly, Category=Ammo)
-	int32 InitialClips;
-
 	/** time between two consecutive shots */
 	UPROPERTY(EditDefaultsOnly, Category=WeaponStat)
 	float TimeBetweenShots;
 
-	/** failsafe reload duration if weapon doesn't have any animation for it */
-	UPROPERTY(EditDefaultsOnly, Category=WeaponStat)
-	float NoAnimReloadDuration;
-
-	/** shots made for each fire. Useful for shotguns */
-	UPROPERTY(EditDefaultsOnly, Category=Ammo)
-	int32 ShotsByFiring = 1;
-
 	/** defaults */
 	FWeaponData()
 	{
-		bInfiniteAmmo = false;
-		bInfiniteClip = false;
-		MaxAmmo = 100;
-		AmmoPerClip = 20;
-		InitialClips = 4;
 		TimeBetweenShots = 0.2f;
-		NoAnimReloadDuration = 1.0f;
 	}
 };
 
@@ -169,21 +135,16 @@ public:
 	
 	enum class EAmmoType
 	{
+		ENone,
 		EBullet,
 		ERocket,
 		EMax,
 	};
 
-	/** [server] add ammo */
-	void GiveAmmo(int AddAmount);
-
-	/** consume a bullet */
-	void UseAmmo();
-
 	/** query ammo type */
 	virtual EAmmoType GetAmmoType() const
 	{
-		return EAmmoType::EBullet;
+		return EAmmoType::ENone;
 	}
 
 	//////////////////////////////////////////////////////////////////////////
@@ -220,19 +181,6 @@ public:
 	/** [local + server] stop weapon fire */
 	virtual void StopFire();
 
-	/** [all] start weapon reload */
-	virtual void StartReload(bool bFromReplication = false);
-
-	/** [local + server] interrupt weapon reload */
-	virtual void StopReload();
-
-	/** [server] performs actual reload */
-	virtual void ReloadWeapon();
-
-	/** trigger reload from server */
-	UFUNCTION(reliable, client)
-	void ClientStartReload();
-
 	/** [server] toggle between sights */
 	virtual void ToggleSights();
 
@@ -241,13 +189,10 @@ public:
 	// Control
 
 	/** check if weapon can fire */
-	bool CanFire() const;
+	virtual bool CanFire() const;
 
 	/** check if weapon can be reloaded */
-	bool CanReload() const;
-
-	/** check if weapon can be reloaded */
-	bool CanAim() const;
+	virtual bool CanAim() const;
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -255,18 +200,6 @@ public:
 
 	/** get current weapon state */
 	EWeaponState::Type GetCurrentState() const;
-
-	/** get current ammo amount (total) */
-	int32 GetCurrentAmmo() const;
-
-	/** get current ammo amount (clip) */
-	int32 GetCurrentAmmoInClip() const;
-
-	/** get clip size */
-	int32 GetAmmoPerClip() const;
-
-	/** get max ammo amount */
-	int32 GetMaxAmmo() const;
 
 	/** get weapon mesh (needs pawn owner to determine variant) */
 	USkeletalMeshComponent* GetWeaponMesh() const;
@@ -295,26 +228,6 @@ public:
 	/** icon displayed on the HUD when weapon is secondary */
 	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
 	FCanvasIcon SecondaryIcon;
-
-	/** bullet icon used to draw current clip (left side) */
-	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
-	FCanvasIcon PrimaryClipIcon;
-
-	/** bullet icon used to draw secondary clip (left side) */
-	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
-	FCanvasIcon SecondaryClipIcon;
-
-	/** how many icons to draw per clip */
-	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
-	float AmmoIconsCount;
-
-	/** defines spacing between primary ammo icons (left side) */
-	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
-	int32 PrimaryClipIconOffset;
-
-	/** defines spacing between secondary ammo icons (left side) */
-	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
-	int32 SecondaryClipIconOffset;
 
 	/** crosshair parts icons (left, top, right, bottom and center) */
 	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
@@ -349,14 +262,8 @@ public:
 	float TimerIntervalAdjustment;
 
 	/** Whether to allow automatic weapons to catch up with shorter refire cycles */
-	UPROPERTY(Config)
+	UPROPERTY(EditDefaultsOnly, Category="Config")
 	bool bAllowAutomaticWeaponCatchup = true;
-
-	/** check if weapon has infinite ammo (include owner's cheats) */
-	bool HasInfiniteAmmo() const;
-
-	/** check if weapon has infinite clip (include owner's cheats) */
-	bool HasInfiniteClip() const;
 
 	/** set the weapon's owning pawn */
 	void SetOwningPawn(ACharacter* ACharacter);
@@ -391,8 +298,6 @@ protected:
 	/** weapon anim properties */
 	UPROPERTY(EditDefaultsOnly, Category="Config")
 	FWeaponAnimProperties WeaponAnimProperties;
-
-private:
 	
 	/** weapon mesh: 1st person view */
 	UPROPERTY(VisibleDefaultsOnly, Category=Mesh)
@@ -407,66 +312,6 @@ protected:
 	/** firing audio (bLoopedFireSound set) */
 	UPROPERTY(Transient)
 	UAudioComponent* FireAC;
-
-	/** name of bone/socket for muzzle in weapon mesh */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Muzzle")
-	FName MuzzleAttachPoint;
-
-	/** FX for muzzle flash */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Muzzle")
-	UParticleSystem* MuzzleFX;
-
-	/** spawned component for muzzle FX */
-	UPROPERTY(Transient)
-	UParticleSystemComponent* MuzzlePSC;
-
-	/** spawned component for second muzzle FX (Needed for split screen) */
-	UPROPERTY(Transient)
-	UParticleSystemComponent* MuzzlePSCSecondary;
-
-	/** niagara FX for muzzle flash */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Muzzle")
-	TSoftObjectPtr<UNiagaraSystem> NiagaraMuzzleFX;
-
-	/** niagara param name for muzzle flash trigger */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Muzzle")
-	FName NiagaraMuzzleTriggerParam;
-
-	/** niagara spawned component for muzzle FX */
-	UPROPERTY(Transient)
-	class UNiagaraComponent* NiagaraMuzzleNC;
-
-	/** niagara spawned component for second muzzle FX (Needed for split screen) */
-	UPROPERTY(Transient)
-	UNiagaraComponent* NiagaraMuzzleNCSecondary;
-
-	/** niagara FX for shell eject */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Shell")
-	TSoftObjectPtr<UNiagaraSystem> NiagaraShellFX;
-
-	/** shell eject mesh */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Shell")
-	TSoftObjectPtr<UStaticMesh> ShellMesh;
-
-	/** shell eject socket name */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Shell")
-	FName ShellEjectSocketName;
-
-	/** niagara param name for shell eject trigger */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Shell")
-	FName NiagaraShellTriggerParam;
-
-	/** niagara param name for shell eject mesh */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Shell")
-	FName NiagaraShellMeshParam;
-
-	/** niagara spawned component for shell FX */
-	UPROPERTY(Transient)
-	class UNiagaraComponent* NiagaraShellNC;
-
-	/** niagara spawned component for second shell FX (Needed for split screen) */
-	UPROPERTY(Transient)
-	UNiagaraComponent* NiagaraShellNCSecondary;
 
 	/** camera shake on firing */
 	UPROPERTY(EditDefaultsOnly, Category="Config|Effects")
@@ -488,6 +333,10 @@ protected:
 	// the speed at which the recoil resets per second
 	UPROPERTY(EditDefaultsOnly, Category = "Config|Effects|Recoil")
 	float RecoilResetSpeed;
+	
+	/** name of bone/socket for attach sounds in weapon mesh */
+	UPROPERTY(EditDefaultsOnly, Category="Config|Sound")
+	FName SoundsAttachPoint;
 
 	/** single fire sound (bLoopedFireSound not set) */
 	UPROPERTY(EditDefaultsOnly, Category="Config|Sound")
@@ -505,14 +354,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category="Config|Sound")
 	USoundBase* OutOfAmmoSound;
 
-	/** reload sound */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Sound")
-	USoundBase* ReloadSound;
-
-	/** reload animations */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Animation")
-	FWeaponAnim ReloadAnim;
-
 	/** equip sound */
 	UPROPERTY(EditDefaultsOnly, Category="Config|Sound")
 	USoundBase* EquipSound;
@@ -524,14 +365,6 @@ protected:
 	/** fire animations */
 	UPROPERTY(EditDefaultsOnly, Category="Config|Animation")
 	FWeaponAnim FireAnim;
-
-	/** is muzzle FX looped? */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Muzzle")
-	uint32 bLoopedMuzzleFX : 1;
-
-	/** is muzzle FX looped? */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Shell")
-	uint32 bLoopedShellFX : 1;
 
 	/** is fire sound looped? */
 	UPROPERTY(EditDefaultsOnly, Category="Config|Sound")
@@ -549,10 +382,6 @@ protected:
 
 	/** is weapon fire active? */
 	uint32 bWantsToFire : 1;
-
-	/** is reload animation playing? */
-	UPROPERTY(Transient, ReplicatedUsing=OnRep_Reload)
-	uint32 bPendingReload : 1;
 
 	/** is equip animation playing? */
 	uint32 bPendingEquip : 1;
@@ -572,14 +401,6 @@ protected:
 	/** how much time weapon needs to be equipped */
 	float EquipDuration;
 
-	/** current total ammo */
-	UPROPERTY(Transient, Replicated)
-	int32 CurrentAmmo;
-
-	/** current ammo - inside clip */
-	UPROPERTY(Transient, Replicated)
-	int32 CurrentAmmoInClip;
-
 	/** burst counter, used for replicating fire events to remote clients */
 	UPROPERTY(Transient, ReplicatedUsing=OnRep_BurstCounter)
 	int32 BurstCounter;
@@ -594,12 +415,6 @@ protected:
 
 	/** Handle for efficient management of OnEquipFinished timer */
 	FTimerHandle TimerHandle_OnEquipFinished;
-
-	/** Handle for efficient management of StopReload timer */
-	FTimerHandle TimerHandle_StopReload;
-
-	/** Handle for efficient management of ReloadWeapon timer */
-	FTimerHandle TimerHandle_ReloadWeapon;
 
 	/** Handle for efficient management of HandleFiring timer */
 	FTimerHandle TimerHandle_HandleFiring;
@@ -620,12 +435,6 @@ protected:
 	void ServerStopFire();
 
 	UFUNCTION(reliable, server)
-	void ServerStartReload();
-
-	UFUNCTION(reliable, server)
-	void ServerStopReload();
-
-	UFUNCTION(reliable, server)
 	void ServerToggleSights();
 
 
@@ -637,9 +446,6 @@ protected:
 
 	UFUNCTION()
 	void OnRep_BurstCounter();
-
-	UFUNCTION()
-	void OnRep_Reload();
 
 	/** Called in network play to do the cosmetic fx for firing */
 	virtual void SimulateWeaponFire();
@@ -657,12 +463,13 @@ protected:
 	/** [server] fire & update ammo */
 	UFUNCTION(reliable, server)
 	void ServerHandleFiring();
+	virtual void ServerHandleFiring_Implementation();
 
 	/** [local + server] handle weapon refire, compensating for slack time if the timer can't sample fast enough */
 	void HandleReFiring();
 
 	/** [local + server] handle weapon fire */
-	void HandleFiring();
+	virtual void HandleFiring();
 
 	/** [local + server] firing started */
 	virtual void OnBurstStarted();
@@ -674,7 +481,7 @@ protected:
 	void SetWeaponState(EWeaponState::Type NewState);
 
 	/** determine current weapon state */
-	void DetermineWeaponState();
+	virtual void DetermineWeaponState();
 
 	/** adds new recoil instance */
 	FORCEINLINE void AddRecoilInstance(const FRecoilParams& RecoilParams)
@@ -718,12 +525,6 @@ protected:
 
 	/** get the originating location for camera damage */
 	FVector GetCameraDamageStartLocation(const FVector& AimDir) const;
-
-	/** get the muzzle location of the weapon */
-	FVector GetMuzzleLocation() const;
-
-	/** get direction of weapon's muzzle */
-	FVector GetMuzzleDirection() const;
 
 	/** find hit */
 	FHitResult WeaponTrace(const FVector& TraceFrom, const FVector& TraceTo) const;

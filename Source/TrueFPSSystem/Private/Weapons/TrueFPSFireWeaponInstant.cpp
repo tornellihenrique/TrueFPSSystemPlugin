@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Weapons/TrueFPSWeaponInstant.h"
+#include "Weapons/TrueFPSFireWeaponInstant.h"
 
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraSystem.h"
@@ -15,12 +15,12 @@
 #include "Net/UnrealNetwork.h"
 #include "Particles/ParticleSystemComponent.h"
 
-ATrueFPSWeaponInstant::ATrueFPSWeaponInstant(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
+ATrueFPSFireWeaponInstant::ATrueFPSFireWeaponInstant(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	CurrentFiringSpread = 0.0f;
 }
 
-float ATrueFPSWeaponInstant::GetCurrentSpread() const
+float ATrueFPSFireWeaponInstant::GetCurrentSpread() const
 {
 	float FinalSpread = InstantConfig.WeaponSpread + CurrentFiringSpread;
 	if (MyPawn && MyPawn->Implements<UTrueFPSCharacterInterface>() && ITrueFPSCharacterInterface::Execute_IsAiming(MyPawn))
@@ -31,7 +31,7 @@ float ATrueFPSWeaponInstant::GetCurrentSpread() const
 	return FinalSpread;
 }
 
-void ATrueFPSWeaponInstant::ServerNotifyHit_Implementation(const FHitResult& Impact, FVector_NetQuantizeNormal ShootDir,
+void ATrueFPSFireWeaponInstant::ServerNotifyHit_Implementation(const FHitResult& Impact, FVector_NetQuantizeNormal ShootDir,
 	int32 RandomSeed, float ReticleSpread)
 {
 	const float WeaponAngleDot = FMath::Abs(FMath::Sin(ReticleSpread * PI / 180.f));
@@ -103,7 +103,7 @@ void ATrueFPSWeaponInstant::ServerNotifyHit_Implementation(const FHitResult& Imp
 	}
 }
 
-void ATrueFPSWeaponInstant::ServerNotifyMiss_Implementation(FVector_NetQuantizeNormal ShootDir, int32 RandomSeed,
+void ATrueFPSFireWeaponInstant::ServerNotifyMiss_Implementation(FVector_NetQuantizeNormal ShootDir, int32 RandomSeed,
 	float ReticleSpread)
 {
 	const FVector Origin = GetMuzzleLocation();
@@ -121,7 +121,7 @@ void ATrueFPSWeaponInstant::ServerNotifyMiss_Implementation(FVector_NetQuantizeN
 	}
 }
 
-void ATrueFPSWeaponInstant::ProcessInstantHit(const FHitResult& Impact, const FVector& Origin, const FVector& ShootDir,
+void ATrueFPSFireWeaponInstant::ProcessInstantHit(const FHitResult& Impact, const FVector& Origin, const FVector& ShootDir,
 	int32 RandomSeed, float ReticleSpread)
 {
 	if (MyPawn && MyPawn->IsLocallyControlled() && GetNetMode() == NM_Client)
@@ -151,7 +151,7 @@ void ATrueFPSWeaponInstant::ProcessInstantHit(const FHitResult& Impact, const FV
 	ProcessInstantHit_Confirmed(Impact, Origin, ShootDir, RandomSeed, ReticleSpread);
 }
 
-void ATrueFPSWeaponInstant::ProcessInstantHit_Confirmed(const FHitResult& Impact, const FVector& Origin,
+void ATrueFPSFireWeaponInstant::ProcessInstantHit_Confirmed(const FHitResult& Impact, const FVector& Origin,
 	const FVector& ShootDir, int32 RandomSeed, float ReticleSpread)
 {
 	// handle damage
@@ -179,7 +179,7 @@ void ATrueFPSWeaponInstant::ProcessInstantHit_Confirmed(const FHitResult& Impact
 	}
 }
 
-bool ATrueFPSWeaponInstant::ShouldDealDamage(AActor* TestActor) const
+bool ATrueFPSFireWeaponInstant::ShouldDealDamage(AActor* TestActor) const
 {
 	// if we're an actor on the server, or the actor's role is authoritative, we should register damage
 	if (TestActor)
@@ -195,7 +195,7 @@ bool ATrueFPSWeaponInstant::ShouldDealDamage(AActor* TestActor) const
 	return false;
 }
 
-void ATrueFPSWeaponInstant::DealDamage(const FHitResult& Impact, const FVector& ShootDir)
+void ATrueFPSFireWeaponInstant::DealDamage(const FHitResult& Impact, const FVector& ShootDir)
 {
 	FPointDamageEvent PointDmg;
 	PointDmg.DamageTypeClass = InstantConfig.DamageType;
@@ -208,7 +208,7 @@ void ATrueFPSWeaponInstant::DealDamage(const FHitResult& Impact, const FVector& 
 	OnDealDamage(Impact, ShootDir);
 }
 
-void ATrueFPSWeaponInstant::FireWeapon()
+void ATrueFPSFireWeaponInstant::FireWeapon()
 {
 	const int32 RandomSeed = FMath::Rand();
 	FRandomStream WeaponRandomStream(RandomSeed);
@@ -226,19 +226,19 @@ void ATrueFPSWeaponInstant::FireWeapon()
 	CurrentFiringSpread = FMath::Min(InstantConfig.FiringSpreadMax, CurrentFiringSpread + InstantConfig.FiringSpreadIncrement);
 }
 
-void ATrueFPSWeaponInstant::OnBurstFinished()
+void ATrueFPSFireWeaponInstant::OnBurstFinished()
 {
 	Super::OnBurstFinished();
 
 	CurrentFiringSpread = 0.0f;
 }
 
-void ATrueFPSWeaponInstant::OnRep_HitNotify()
+void ATrueFPSFireWeaponInstant::OnRep_HitNotify()
 {
 	SimulateInstantHit(HitNotify.Origin, HitNotify.RandomSeed, HitNotify.ReticleSpread);
 }
 
-void ATrueFPSWeaponInstant::SimulateInstantHit(const FVector& ShotOrigin, int32 RandomSeed, float ReticleSpread)
+void ATrueFPSFireWeaponInstant::SimulateInstantHit(const FVector& ShotOrigin, int32 RandomSeed, float ReticleSpread)
 {
 	FRandomStream WeaponRandomStream(RandomSeed);
 	const float ConeHalfAngle = FMath::DegreesToRadians(ReticleSpread * 0.5f);
@@ -260,7 +260,7 @@ void ATrueFPSWeaponInstant::SimulateInstantHit(const FVector& ShotOrigin, int32 
 	}
 }
 
-void ATrueFPSWeaponInstant::SpawnImpactEffects(const FHitResult& Impact)
+void ATrueFPSFireWeaponInstant::SpawnImpactEffects(const FHitResult& Impact)
 {
 	if (ImpactTemplate && Impact.bBlockingHit)
 	{
@@ -285,7 +285,7 @@ void ATrueFPSWeaponInstant::SpawnImpactEffects(const FHitResult& Impact)
 	}
 }
 
-void ATrueFPSWeaponInstant::SpawnTrailEffect(const FVector& EndPoint)
+void ATrueFPSFireWeaponInstant::SpawnTrailEffect(const FVector& EndPoint)
 {
 	if (TrailFX)
 	{
@@ -315,7 +315,7 @@ void ATrueFPSWeaponInstant::SpawnTrailEffect(const FVector& EndPoint)
 	}
 }
 
-void ATrueFPSWeaponInstant::GetLifetimeReplicatedProps( TArray< FLifetimeProperty > & OutLifetimeProps ) const
+void ATrueFPSFireWeaponInstant::GetLifetimeReplicatedProps( TArray< FLifetimeProperty > & OutLifetimeProps ) const
 {
 	Super::GetLifetimeReplicatedProps( OutLifetimeProps );
 

@@ -1,21 +1,21 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Weapons/TrueFPSWeaponProjectile.h"
+#include "Weapons/TrueFPSFireWeaponProjectile.h"
 
 #include "Weapons/TrueFPSProjectile.h"
 #include "Kismet/GameplayStatics.h"
 
-ATrueFPSWeaponProjectile::ATrueFPSWeaponProjectile(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
+ATrueFPSFireWeaponProjectile::ATrueFPSFireWeaponProjectile(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 }
 
-void ATrueFPSWeaponProjectile::ApplyWeaponConfig(FProjectileWeaponData& Data)
+void ATrueFPSFireWeaponProjectile::ApplyWeaponConfig(FProjectileWeaponData& Data)
 {
 	Data = ProjectileConfig;
 }
 
-void ATrueFPSWeaponProjectile::FireWeapon()
+void ATrueFPSFireWeaponProjectile::FireWeapon()
 {
 	FVector ShootDir = GetAdjustedAim();
 	FVector Origin = GetMuzzleLocation();
@@ -68,7 +68,7 @@ void ATrueFPSWeaponProjectile::FireWeapon()
 	ServerFireProjectile(Origin, ShootDir);
 }
 
-void ATrueFPSWeaponProjectile::ServerFireProjectile_Implementation(FVector Origin, FVector_NetQuantizeNormal ShootDir)
+void ATrueFPSFireWeaponProjectile::ServerFireProjectile_Implementation(FVector Origin, FVector_NetQuantizeNormal ShootDir)
 {
 	FTransform SpawnTM(ShootDir.Rotation(), Origin);
 	ATrueFPSProjectile* Projectile = Cast<ATrueFPSProjectile>(UGameplayStatics::BeginDeferredActorSpawnFromClass(this, ProjectileConfig.ProjectileClass, SpawnTM));

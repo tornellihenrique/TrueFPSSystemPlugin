@@ -3,8 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Weapons/TrueFPSWeaponBase.h"
-#include "TrueFPSWeaponInstant.generated.h"
+#include "Weapons/TrueFPSFireWeaponBase.h"
+#include "TrueFPSFireWeaponInstant.generated.h"
 
 USTRUCT()
 struct FInstantHitInfo
@@ -86,13 +86,13 @@ struct FInstantWeaponData
 
 // A weapon where the damage impact occurs instantly upon firing
 UCLASS(Abstract)
-class TRUEFPSSYSTEM_API ATrueFPSWeaponInstant : public ATrueFPSWeaponBase
+class TRUEFPSSYSTEM_API ATrueFPSFireWeaponInstant : public ATrueFPSFireWeaponBase
 {
 	GENERATED_BODY()
 
 public:
 
-	ATrueFPSWeaponInstant(const FObjectInitializer& ObjectInitializer);
+	ATrueFPSFireWeaponInstant(const FObjectInitializer& ObjectInitializer);
 
 	/** get current spread */
 	float GetCurrentSpread() const;

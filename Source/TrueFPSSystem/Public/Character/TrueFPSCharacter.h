@@ -245,9 +245,11 @@ public:
 	// Input handlers
 
 	/** player pressed start fire action */
+	UFUNCTION(BlueprintCallable)
 	void OnStartFire();
 
 	/** player released start fire action */
+	UFUNCTION(BlueprintCallable)
 	void OnStopFire();
 
 	/** player pressed aiming action */
