@@ -165,7 +165,7 @@ void STrueFPSScoreboardWidget::StoreTalkingPlayerData(const FUniqueNetId& Player
 
 FText STrueFPSScoreboardWidget::GetMatchRestartText() const
 {
-	if (PCOwner.IsValid() && (PCOwner->GetWorld() != NULL ))
+	if (PCOwner.IsValid() && (PCOwner->GetWorld() != nullptr ))
 	{
 		ATrueFPSGameState* const GameState = PCOwner->GetWorld()->GetGameState<ATrueFPSGameState>();
 		if (GameState)
@@ -579,7 +579,7 @@ bool STrueFPSScoreboardWidget::ProfileUIOpened() const
 
 		const TSharedPtr<const FUniqueNetId>& PlayerId = ( !SelectedPlayer.IsValid() ? OwnerNetId : GetSortedPlayerState(SelectedPlayer)->GetUniqueId().GetUniqueNetId() );
 		check( PlayerId.IsValid() );
-		return TrueFPSUIHelpers::Get().ProfileOpenedUI(PCOwner->GetWorld(), *OwnerNetId.Get(), *PlayerId.Get(), NULL);
+		return TrueFPSUIHelpers::Get().ProfileOpenedUI(PCOwner->GetWorld(), *OwnerNetId.Get(), *PlayerId.Get(), nullptr);
 	}
 	return false;
 }
@@ -855,7 +855,7 @@ ATrueFPSPlayerState* STrueFPSScoreboardWidget::GetSortedPlayerState(const FTeamP
 		return PlayerStateMaps[TeamPlayer.TeamNum].FindRef(TeamPlayer.PlayerId).Get();
 	}
 	
-	return NULL;
+	return nullptr;
 }
 
 int32 STrueFPSScoreboardWidget::GetAttributeValue_Kills(ATrueFPSPlayerState* PlayerState) const

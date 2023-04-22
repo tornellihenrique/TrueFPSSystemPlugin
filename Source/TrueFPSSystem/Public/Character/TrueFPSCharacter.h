@@ -97,6 +97,13 @@ public:
 
 	/** [client] called when replication is paused for this actor */
 	virtual void OnReplicationPausedChanged(bool bIsReplicationPaused) override;
+	
+	/**
+	* Check if pawn is enemy if given controller.
+	*
+	* @param	TestPC	Controller to check against.
+	*/
+	bool IsEnemyFor(AController* TestPC) const;
 
 	UFUNCTION(BlueprintPure)
 	FORCEINLINE USkeletalMeshComponent* GetClientMesh() const { return ClientMesh; }
@@ -584,7 +591,7 @@ protected:
 	// Inventory
 
 	/** updates current weapon */
-	void SetCurrentWeapon(class ATrueFPSWeaponBase* NewWeapon, class ATrueFPSWeaponBase* LastWeapon = NULL);
+	void SetCurrentWeapon(class ATrueFPSWeaponBase* NewWeapon, class ATrueFPSWeaponBase* LastWeapon = nullptr);
 
 	/** current weapon rep handler */
 	UFUNCTION()

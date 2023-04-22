@@ -194,7 +194,7 @@ void ATrueFPSGameSession::OnDestroySessionComplete(FName InSessionName, bool bWa
 	{
 		IOnlineSessionPtr Sessions = OnlineSub->GetSessionInterface();
 		Sessions->ClearOnDestroySessionCompleteDelegate_Handle(OnDestroySessionCompleteDelegateHandle);
-		HostSettings = NULL;
+		HostSettings = nullptr;
 	}
 }
 
@@ -354,7 +354,7 @@ void ATrueFPSGameSession::ContinueMatchmaking()
 void ATrueFPSGameSession::OnNoMatchesAvailable()
 {
 	UE_LOG(LogOnlineGame, Verbose, TEXT("Matchmaking complete, no sessions available."));
-	SearchSettings = NULL;
+	SearchSettings = nullptr;
 }
 
 void ATrueFPSGameSession::FindSessions(TSharedPtr<const FUniqueNetId> UserId, FName InSessionName, bool bIsLAN, bool bIsPresence)

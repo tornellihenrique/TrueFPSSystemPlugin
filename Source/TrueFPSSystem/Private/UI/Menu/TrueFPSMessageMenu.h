@@ -37,7 +37,7 @@ private:
 	/** Owning game instance */
 	TWeakObjectPtr<UTrueFPSGameInstance> GameInstance;
 
-	/** Local player that will have focus of the dialog box (can be NULL) */
+	/** Local player that will have focus of the dialog box (can be nullptr) */
 	TWeakObjectPtr<ULocalPlayer> PlayerOwner;
 
 	/** Cache the desired next state so we can advance to that after the confirmation dialog */

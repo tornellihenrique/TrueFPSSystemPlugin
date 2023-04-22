@@ -84,6 +84,9 @@ public:
 	UPROPERTY(BlueprintReadWrite, Category = "Anim")
 	EAnimState CurrentAnimState;
 
+	UPROPERTY(BlueprintReadWrite, Category = "Anim")
+	class UAnimSequence* AnimPose;
+
 	/**
 	/* Stationary Anim
 	/*/

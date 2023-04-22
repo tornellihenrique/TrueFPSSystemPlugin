@@ -211,7 +211,7 @@ void UTrueFPSGameInstance::HandleNetworkConnectionStatusChanged( const FString& 
 		const FText OKButton		= NSLOCTEXT( "DialogButtons", "OKAY", "OK" );
 		
 		UWorld* const World = GetWorld();
-		ATrueFPSGameMode* const GameMode = World != NULL ? Cast<ATrueFPSGameMode>(World->GetAuthGameMode()) : NULL;
+		ATrueFPSGameMode* const GameMode = World != nullptr ? Cast<ATrueFPSGameMode>(World->GetAuthGameMode()) : nullptr;
 		if (GameMode)
 		{
 			GameMode->AbortMatch();
@@ -495,7 +495,7 @@ void UTrueFPSGameInstance::ShowLoadingScreen()
 
 	UTrueFPSGameViewportClient * TrueFPSGameViewportClient = Cast<UTrueFPSGameViewportClient>(GetGameViewportClient());
 
-	if ( TrueFPSGameViewportClient != NULL )
+	if ( TrueFPSGameViewportClient != nullptr )
 	{
 		TrueFPSGameViewportClient->ShowLoadingScreen();
 	}
@@ -737,7 +737,7 @@ void UTrueFPSGameInstance::BeginMainMenuState()
 	// Make sure we're not showing the loadscreen
 	UTrueFPSGameViewportClient * TrueFPSGameViewportClient = Cast<UTrueFPSGameViewportClient>(GetGameViewportClient());
 
-	if ( TrueFPSGameViewportClient != NULL )
+	if ( TrueFPSGameViewportClient != nullptr )
 	{
 		TrueFPSGameViewportClient->HideLoadingScreen();
 	}
@@ -799,7 +799,7 @@ void UTrueFPSGameInstance::BeginMessageMenuState()
 	// Make sure we're not showing the loadscreen
 	UTrueFPSGameViewportClient * TrueFPSGameViewportClient = Cast<UTrueFPSGameViewportClient>(GetGameViewportClient());
 
-	if ( TrueFPSGameViewportClient != NULL )
+	if ( TrueFPSGameViewportClient != nullptr )
 	{
 		TrueFPSGameViewportClient->HideLoadingScreen();
 	}
@@ -840,7 +840,7 @@ void UTrueFPSGameInstance::EndPlayingState()
 	SetPresenceForLocalPlayers(FString(TEXT("In Menu")), FVariantData(FString(TEXT("OnMenu"))));
 
 	UWorld* const World = GetWorld();
-	ATrueFPSGameState* const GameState = World != NULL ? World->GetGameState<ATrueFPSGameState>() : NULL;
+	ATrueFPSGameState* const GameState = World != nullptr ? World->GetGameState<ATrueFPSGameState>() : nullptr;
 
 	if (GameState)
 	{
@@ -891,7 +891,7 @@ void UTrueFPSGameInstance::CleanupSessionOnReturnToMenu()
 
 	// end online game and then destroy it
 	IOnlineSubsystem* OnlineSub = Online::GetSubsystem(GetWorld());
-	IOnlineSessionPtr Sessions = ( OnlineSub != NULL ) ? OnlineSub->GetSessionInterface() : NULL;
+	IOnlineSessionPtr Sessions = ( OnlineSub != nullptr ) ? OnlineSub->GetSessionInterface() : nullptr;
 
 	if ( Sessions.IsValid() )
 	{
@@ -1350,7 +1350,7 @@ bool UTrueFPSGameInstance::Tick(float DeltaSeconds)
 	if (PendingInvite.UserId.IsValid() && PendingInvite.bPrivilegesCheckedAndAllowed && CurrentState == TrueFPSGameInstanceState::PendingInvite)
 	{
 		IOnlineSubsystem* OnlineSub = Online::GetSubsystem(GetWorld());
-		IOnlineSessionPtr Sessions = (OnlineSub != NULL) ? OnlineSub->GetSessionInterface() : NULL;
+		IOnlineSessionPtr Sessions = (OnlineSub != nullptr) ? OnlineSub->GetSessionInterface() : nullptr;
 
 		if (Sessions.IsValid())
 		{
@@ -1456,7 +1456,7 @@ void UTrueFPSGameInstance::HandleUserLoginChanged(int32 GameUserIndex, ELoginSta
 	LocalPlayerOnlineStatus[GameUserIndex] = LoginStatus;
 
 	// If this user is signed out, but was previously signed in, punt to welcome (or remove splitscreen if that makes sense)
-	if ( LocalPlayer != NULL )
+	if ( LocalPlayer != nullptr )
 	{
 		if (bDowngraded)
 		{
@@ -1515,7 +1515,7 @@ void UTrueFPSGameInstance::HandleAppSuspend()
 	// Players will lose connection on resume. However it is possible the game will exit before we get a resume, so we must kick off round end events here.
 	UE_LOG( LogOnline, Warning, TEXT( "UTrueFPSGameInstance::HandleAppSuspend" ) );
 	UWorld* const World = GetWorld(); 
-	ATrueFPSGameState* const GameState = World != NULL ? World->GetGameState<ATrueFPSGameState>() : NULL;
+	ATrueFPSGameState* const GameState = World != nullptr ? World->GetGameState<ATrueFPSGameState>() : nullptr;
 
 	if ( CurrentState != TrueFPSGameInstanceState::None && CurrentState != GetInitialState() )
 	{
@@ -1568,13 +1568,13 @@ void UTrueFPSGameInstance::HandleSafeFrameChanged()
 void UTrueFPSGameInstance::RemoveExistingLocalPlayer(ULocalPlayer* ExistingPlayer)
 {
 	check(ExistingPlayer);
-	if (ExistingPlayer->PlayerController != NULL)
+	if (ExistingPlayer->PlayerController != nullptr)
 	{
 		// Kill the player
 		ATrueFPSCharacter* MyPawn = Cast<ATrueFPSCharacter>(ExistingPlayer->PlayerController->GetPawn());
 		if ( MyPawn )
 		{
-			MyPawn->KilledBy(NULL);
+			MyPawn->KilledBy(nullptr);
 		}
 	}
 
@@ -1644,7 +1644,7 @@ void UTrueFPSGameInstance::HandleControllerPairingChanged(int GameUserIndex, FCo
 		// Treat this as a signin
 		ULocalPlayer * ControlledLocalPlayer = FindLocalPlayerFromControllerId( GameUserIndex );
 
-		if ( ControlledLocalPlayer != NULL && !ControlledLocalPlayer->GetCachedUniqueNetId().IsValid() )
+		if ( ControlledLocalPlayer != nullptr && !ControlledLocalPlayer->GetCachedUniqueNetId().IsValid() )
 		{
 			// If a player that previously selected "continue without saving" signs into this controller, move them back to welcome screen
 			HandleSignInChangeMessaging();
@@ -1693,7 +1693,7 @@ void UTrueFPSGameInstance::HandleControllerConnectionChange( bool bIsConnection,
 		// Find the local player associated with this user index
 		ULocalPlayer * LocalPlayer = FindLocalPlayerFromControllerId( GameUserIndex );
 
-		if ( LocalPlayer == NULL )
+		if ( LocalPlayer == nullptr )
 		{
 			return;		// We don't care about players we aren't tracking
 		}
@@ -1772,7 +1772,7 @@ void UTrueFPSGameInstance::SetIgnorePairingChangeForControllerId( const int32 Co
 
 bool UTrueFPSGameInstance::IsLocalPlayerOnline(ULocalPlayer* LocalPlayer)
 {
-	if (LocalPlayer == NULL)
+	if (LocalPlayer == nullptr)
 	{
 		return false;
 	}
@@ -1799,7 +1799,7 @@ bool UTrueFPSGameInstance::IsLocalPlayerOnline(ULocalPlayer* LocalPlayer)
 
 bool UTrueFPSGameInstance::IsLocalPlayerSignedIn(ULocalPlayer* LocalPlayer)
 {
-	if (LocalPlayer == NULL)
+	if (LocalPlayer == nullptr)
 	{
 		return false;
 	}
@@ -1830,13 +1830,13 @@ bool UTrueFPSGameInstance::ValidatePlayerForOnlinePlay(ULocalPlayer* LocalPlayer
 	if (CurrentConnectionStatus != EOnlineServerConnectionStatus::Connected)
 	{
 		// Don't let them play online if they aren't connected to Xbox LIVE
-		if (TrueFPSViewport != NULL)
+		if (TrueFPSViewport != nullptr)
 		{
 			const FText Msg				= NSLOCTEXT("NetworkFailures", "ServiceDisconnected", "You must be connected to the Xbox LIVE service to play online.");
 			const FText OKButtonString	= NSLOCTEXT("DialogButtons", "OKAY", "OK");
 
 			TrueFPSViewport->ShowDialog( 
-				NULL,
+				nullptr,
 				ETrueFPSDialogType::Generic,
 				Msg,
 				OKButtonString,
@@ -1853,13 +1853,13 @@ bool UTrueFPSGameInstance::ValidatePlayerForOnlinePlay(ULocalPlayer* LocalPlayer
 	if (!IsLocalPlayerOnline(LocalPlayer))
 	{
 		// Don't let them play online if they aren't online
-		if (TrueFPSViewport != NULL)
+		if (TrueFPSViewport != nullptr)
 		{
 			const FText Msg				= NSLOCTEXT("NetworkFailures", "MustBeSignedIn", "You must be signed in to play online");
 			const FText OKButtonString	= NSLOCTEXT("DialogButtons", "OKAY", "OK");
 
 			TrueFPSViewport->ShowDialog( 
-				NULL,
+				nullptr,
 				ETrueFPSDialogType::Generic,
 				Msg,
 				OKButtonString,
@@ -1883,13 +1883,13 @@ bool UTrueFPSGameInstance::ValidatePlayerIsSignedIn(ULocalPlayer* LocalPlayer)
 	if (!IsLocalPlayerSignedIn(LocalPlayer))
 	{
 		// Don't let them play online if they aren't online
-		if (TrueFPSViewport != NULL)
+		if (TrueFPSViewport != nullptr)
 		{
 			const FText Msg = NSLOCTEXT("NetworkFailures", "MustBeSignedIn", "You must be signed in to play online");
 			const FText OKButtonString = NSLOCTEXT("DialogButtons", "OKAY", "OK");
 
 			TrueFPSViewport->ShowDialog(
-				NULL,
+				nullptr,
 				ETrueFPSDialogType::Generic,
 				Msg,
 				OKButtonString,
@@ -1969,7 +1969,7 @@ void UTrueFPSGameInstance::DisplayOnlinePrivilegeFailureDialogs(const FUniqueNet
 		}
 	}
 	
-	if (TrueFPSViewport != NULL && OwningPlayer.IsValid())
+	if (TrueFPSViewport != nullptr && OwningPlayer.IsValid())
 	{
 		if ((PrivilegeResults & (uint32)IOnlineIdentity::EPrivilegeResults::AccountTypeFailure) != 0)
 		{

@@ -17,8 +17,10 @@
 #include "Net/UnrealNetwork.h"
 #include "Sound/SoundCue.h"
 #include "GameFramework/DamageType.h"
+#include "GameFramework/GameStateBase.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Online/TrueFPSGameMode.h"
+#include "Online/TrueFPSPlayerState.h"
 #include "Sound/LocalPlayerSoundNode.h"
 #include "UI/TrueFPSHUD.h"
 #include "Weapons/TrueFPSDamageType.h"
@@ -186,6 +188,29 @@ bool ATrueFPSCharacter::IsReplicationPausedForConnection(const FNetViewer& Conne
 void ATrueFPSCharacter::OnReplicationPausedChanged(bool bIsReplicationPaused)
 {
 	GetMesh()->SetHiddenInGame(bIsReplicationPaused, true);
+}
+
+bool ATrueFPSCharacter::IsEnemyFor(AController* TestPC) const
+{
+	if (TestPC == Controller || TestPC == nullptr)
+	{
+		return false;
+	}
+
+	ATrueFPSPlayerState* TestPlayerState = Cast<ATrueFPSPlayerState>(TestPC->PlayerState);
+	ATrueFPSPlayerState* MyPlayerState = Cast<ATrueFPSPlayerState>(GetPlayerState());
+
+	bool bIsEnemy = true;
+	if (GetWorld()->GetGameState())
+	{
+		const ATrueFPSGameMode* DefGame = GetWorld()->GetGameState()->GetDefaultGameMode<ATrueFPSGameMode>();
+		if (DefGame && MyPlayerState && TestPlayerState)
+		{
+			bIsEnemy = DefGame->CanDealDamage(TestPlayerState, MyPlayerState);
+		}
+	}
+
+	return bIsEnemy;
 }
 
 void ATrueFPSCharacter::BeginPlay()
@@ -498,23 +523,15 @@ void ATrueFPSCharacter::StopAllAnimMontages()
 
 void ATrueFPSCharacter::OnStartFire()
 {
-	if (IsPlayerRunning())
+	ATrueFPSPlayerController* MyPC = Cast<ATrueFPSPlayerController>(Controller);
+	if (MyPC && MyPC->IsGameInputAllowed())
 	{
-		SetRunning(false, false);
+		if (IsPlayerRunning())
+		{
+			SetRunning(false, false);
+		}
+		StartWeaponFire();
 	}
-	
-	StartWeaponFire();
-	
-	// TODO: Implement
-	// ATrueFPSPlayerController* MyPC = Cast<ATrueFPSPlayerController>(Controller);
-	// if (MyPC && MyPC->IsGameInputAllowed())
-	// {
-	// 	if (IsPlayerRunning())
-	// 	{
-	// 		SetRunning(false, false);
-	// 	}
-	// 	StartWeaponFire();
-	// }
 }
 
 void ATrueFPSCharacter::OnStopFire()
@@ -524,25 +541,15 @@ void ATrueFPSCharacter::OnStopFire()
 
 void ATrueFPSCharacter::OnStartAiming()
 {
-	if (CurrentWeapon && !CurrentWeapon->CanAim()) return;
-	
-	if (IsPlayerRunning())
+	ATrueFPSPlayerController* MyPC = Cast<ATrueFPSPlayerController>(Controller);
+	if (MyPC && MyPC->IsGameInputAllowed())
 	{
-		SetRunning(false, false);
+		if (IsPlayerRunning())
+		{
+			SetRunning(false, false);
+		}
+		SetAiming(true);
 	}
-	
-	SetAiming(true);
-	
-	// TODO: Implement
-	// ATrueFPSPlayerController* MyPC = Cast<ATrueFPSPlayerController>(Controller);
-	// if (MyPC && MyPC->IsGameInputAllowed())
-	// {
-	// 	if (IsPlayerRunning())
-	// 	{
-	// 		SetRunning(false, false);
-	// 	}
-	// 	SetAiming(true);
-	// }
 }
 
 void ATrueFPSCharacter::OnStopAiming()
@@ -552,76 +559,51 @@ void ATrueFPSCharacter::OnStopAiming()
 
 void ATrueFPSCharacter::OnNextWeapon()
 {
-	if (Inventory.Num() >= 2 && (CurrentWeapon == nullptr || CurrentWeapon->GetCurrentState() != EWeaponState::Equipping))
+	ATrueFPSPlayerController* MyPC = Cast<ATrueFPSPlayerController>(Controller);
+	if (MyPC && MyPC->IsGameInputAllowed())
 	{
-		const int32 CurrentWeaponIdx = Inventory.IndexOfByKey(CurrentWeapon);
-		ATrueFPSWeaponBase* NextWeapon = Inventory[(CurrentWeaponIdx + 1) % Inventory.Num()];
-		EquipWeapon(NextWeapon);
+		if (Inventory.Num() >= 2 && (CurrentWeapon == nullptr || CurrentWeapon->GetCurrentState() != EWeaponState::Equipping))
+		{
+			const int32 CurrentWeaponIdx = Inventory.IndexOfByKey(CurrentWeapon);
+			ATrueFPSWeaponBase* NextWeapon = Inventory[(CurrentWeaponIdx + 1) % Inventory.Num()];
+			EquipWeapon(NextWeapon);
+		}
 	}
-	
-	// TODO: Implement
-	// ATrueFPSPlayerController* MyPC = Cast<ATrueFPSPlayerController>(Controller);
-	// if (MyPC && MyPC->IsGameInputAllowed())
-	// {
-	// 	if (Inventory.Num() >= 2 && (CurrentWeapon == nullptr || CurrentWeapon->GetCurrentState() != EWeaponState::Equipping))
-	// 	{
-	// 		const int32 CurrentWeaponIdx = Inventory.IndexOfByKey(CurrentWeapon);
-	// 		AShooterWeapon* NextWeapon = Inventory[(CurrentWeaponIdx + 1) % Inventory.Num()];
-	// 		EquipWeapon(NextWeapon);
-	// 	}
-	// }
 }
 
 void ATrueFPSCharacter::OnPrevWeapon()
 {
-	if (Inventory.Num() >= 2 && (CurrentWeapon == nullptr || CurrentWeapon->GetCurrentState() != EWeaponState::Equipping))
+	ATrueFPSPlayerController* MyPC = Cast<ATrueFPSPlayerController>(Controller);
+	if (MyPC && MyPC->IsGameInputAllowed())
 	{
-		const int32 CurrentWeaponIdx = Inventory.IndexOfByKey(CurrentWeapon);
-		ATrueFPSWeaponBase* PrevWeapon = Inventory[(CurrentWeaponIdx - 1 + Inventory.Num()) % Inventory.Num()];
-		EquipWeapon(PrevWeapon);
+		if (Inventory.Num() >= 2 && (CurrentWeapon == nullptr || CurrentWeapon->GetCurrentState() != EWeaponState::Equipping))
+		{
+			const int32 CurrentWeaponIdx = Inventory.IndexOfByKey(CurrentWeapon);
+			ATrueFPSWeaponBase* PrevWeapon = Inventory[(CurrentWeaponIdx - 1 + Inventory.Num()) % Inventory.Num()];
+			EquipWeapon(PrevWeapon);
+		}
 	}
-
-	// TODO: Implement
-	// AShooterPlayerController* MyPC = Cast<AShooterPlayerController>(Controller);
-	// if (MyPC && MyPC->IsGameInputAllowed())
-	// {
-	// 	if (Inventory.Num() >= 2 && (CurrentWeapon == nullptr || CurrentWeapon->GetCurrentState() != EWeaponState::Equipping))
-	// 	{
-	// 		const int32 CurrentWeaponIdx = Inventory.IndexOfByKey(CurrentWeapon);
-	// 		AShooterWeapon* PrevWeapon = Inventory[(CurrentWeaponIdx - 1 + Inventory.Num()) % Inventory.Num()];
-	// 		EquipWeapon(PrevWeapon);
-	// 	}
-	// }
 }
 
 void ATrueFPSCharacter::OnReload()
 {
-	if (ATrueFPSFireWeaponBase* CurrentFireWeapon = Cast<ATrueFPSFireWeaponBase>(CurrentWeapon))
+	ATrueFPSPlayerController* MyPC = Cast<ATrueFPSPlayerController>(Controller);
+	if (MyPC && MyPC->IsGameInputAllowed())
 	{
-		CurrentFireWeapon->StartReload();
+		if (ATrueFPSFireWeaponBase* CurrentFireWeapon = Cast<ATrueFPSFireWeaponBase>(CurrentWeapon))
+		{
+			CurrentFireWeapon->StartReload();
+		}
 	}
-
-	// TODO: Implement
-	// AShooterPlayerController* MyPC = Cast<AShooterPlayerController>(Controller);
-	// if (MyPC && MyPC->IsGameInputAllowed())
-	// {
-	// 	if (CurrentWeapon)
-	// 	{
-	// 		CurrentWeapon->StartReload();
-	// 	}
-	// }
 }
 
 void ATrueFPSCharacter::OnStartJump()
 {
-	bPressedJump = true;
-	
-	// TODO: Implement
-	// AShooterPlayerController* MyPC = Cast<AShooterPlayerController>(Controller);
-	// if (MyPC && MyPC->IsGameInputAllowed())
-	// {
-	// 	bPressedJump = true;
-	// }
+	ATrueFPSPlayerController* MyPC = Cast<ATrueFPSPlayerController>(Controller);
+	if (MyPC && MyPC->IsGameInputAllowed())
+	{
+		bPressedJump = true;
+	}
 }
 
 void ATrueFPSCharacter::OnStopJump()
@@ -632,25 +614,17 @@ void ATrueFPSCharacter::OnStopJump()
 
 void ATrueFPSCharacter::OnStartRunning()
 {
-	if (IsPlayerAiming())
+	ATrueFPSPlayerController* MyPC = Cast<ATrueFPSPlayerController>(Controller);
+	if (MyPC && MyPC->IsGameInputAllowed())
 	{
-		SetAiming(false);
+		if (IsPlayerAiming())
+		{
+			SetAiming(false);
+		}
+	
+		StopWeaponFire();
+		SetRunning(true, false);
 	}
-	
-	StopWeaponFire();
-	SetRunning(true, false);
-	
-	// TODO: Implement
-	// AShooterPlayerController* MyPC = Cast<AShooterPlayerController>(Controller);
-	// if (MyPC && MyPC->IsGameInputAllowed())
-	// {
-	// 	if (IsTargeting())
-	// 	{
-	// 		SetTargeting(false);
-	// 	}
-	// 	StopWeaponFire();
-	// 	SetRunning(true, false);
-	// }
 }
 
 void ATrueFPSCharacter::OnStopRunning()
@@ -748,9 +722,7 @@ bool ATrueFPSCharacter::IsPlayerRunning() const
 
 bool ATrueFPSCharacter::IsFirstPersonPlayer() const
 {
-	// return IsAlive() && Controller && Controller->IsLocalPlayerController();
 	return IsAlive() && IsLocallyControlled();
-	// return true;
 }
 
 int32 ATrueFPSCharacter::GetMaxHealth() const

@@ -11,7 +11,7 @@ struct FTrueFPSSystemLoadingScreenBrush : public FSlateDynamicImageBrush, public
 	FTrueFPSSystemLoadingScreenBrush( const FName InTextureName, const FVector2D& InImageSize )
 		: FSlateDynamicImageBrush( InTextureName, InImageSize )
 	{
-		SetResourceObject(LoadObject<UObject>( NULL, *InTextureName.ToString() ));
+		SetResourceObject(LoadObject<UObject>( nullptr, *InTextureName.ToString() ));
 	}
 
 	virtual void AddReferencedObjects(FReferenceCollector& Collector)
@@ -76,7 +76,7 @@ public:
 	virtual void StartupModule() override
 	{		
 		// Load for cooker reference
-		LoadObject<UObject>(NULL, TEXT("/TrueFPSSystemPlugin/UI/Menu/LoadingScreen.LoadingScreen") );
+		LoadObject<UObject>(nullptr, TEXT("/TrueFPSSystemPlugin/UI/Menu/LoadingScreen.LoadingScreen") );
 
 
 		// Previously, we set up our startup movie here to play while the engine was initially loading. By removing this behavior, 

@@ -6,6 +6,7 @@
 #include "GameFramework/GameMode.h"
 #include "TrueFPSGameMode.generated.h"
 
+class ATrueFPSAIController;
 class ATrueFPSPlayerController;
 class ATrueFPSPlayerState;
 
@@ -21,6 +22,10 @@ public:
 	/** The bot pawn class */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=GameMode)
 	TSubclassOf<APawn> BotPawnClass;
+
+	/** The bot amount for spawning */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=GameMode)
+	int32 BotsAmount = 0;
 
 	UFUNCTION(exec)
 	void SetAllowBots(bool bInAllowBots, int32 InMaxBots = 8);
@@ -79,7 +84,7 @@ public:
 	void CreateBotControllers();
 
 	/** Create a bot */
-	// AShooterAIController* CreateBot(int32 BotNum); @todo implement bots	
+	ATrueFPSAIController* CreateBot(int32 BotNum);
 
 	virtual void PostInitProperties() override;
 
@@ -120,8 +125,8 @@ protected:
 	UPROPERTY(config)
 	bool bDrawKills = false;
 
-	// UPROPERTY()
-	// TArray<AShooterAIController*> BotControllers; @todo implement bots
+	UPROPERTY()
+	TArray<ATrueFPSAIController*> BotControllers;
 
 	UPROPERTY(config)
 	TSubclassOf<ATrueFPSPlayerController> PlatformPlayerControllerClass;
@@ -137,7 +142,7 @@ protected:
 	void StartBots();
 
 	/** initialization for bot after creation */
-	// virtual void InitBot(AShooterAIController* AIC, int32 BotNum); @todo implement bots
+	virtual void InitBot(ATrueFPSAIController* AIC, int32 BotNum);
 
 	/** check who won */
 	virtual void DetermineMatchWinner();

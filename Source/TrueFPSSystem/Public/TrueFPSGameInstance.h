@@ -35,7 +35,7 @@ public:
 	FText	CancelButtonString;			// If this is not empty, it will be the cancel button text
 	FName	NextState;					// Final destination state once message is discarded
 
-	TWeakObjectPtr< ULocalPlayer > PlayerOwner;		// Owner of dialog who will have focus (can be NULL)
+	TWeakObjectPtr< ULocalPlayer > PlayerOwner;		// Owner of dialog who will have focus (can be nullptr)
 };
 
 class FTrueFPSPendingInvite

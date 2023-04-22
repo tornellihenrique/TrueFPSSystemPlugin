@@ -48,7 +48,7 @@ void ATrueFPSFireWeaponInstant::ServerNotifyHit_Implementation(const FHitResult&
 		{
 			if (CurrentState != EWeaponState::Idle)
 			{
-				if (Impact.GetActor() == NULL)
+				if (Impact.GetActor() == nullptr)
 				{
 					if (Impact.bBlockingHit)
 					{
@@ -132,7 +132,7 @@ void ATrueFPSFireWeaponInstant::ProcessInstantHit(const FHitResult& Impact, cons
 			// notify the server of the hit
 			ServerNotifyHit(Impact, ShootDir, RandomSeed, ReticleSpread);
 		}
-		else if (Impact.GetActor() == NULL)
+		else if (Impact.GetActor() == nullptr)
 		{
 			if (Impact.bBlockingHit)
 			{

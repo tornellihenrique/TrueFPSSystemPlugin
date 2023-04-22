@@ -136,7 +136,7 @@ void UTrueFPSGameViewportClient::HideDialog()
 		RemoveViewportWidgetContent( DialogWidget.ToSharedRef() );
 
 		// Destroy the dialog widget
-		DialogWidget = NULL;
+		DialogWidget = nullptr;
 
 		if ( !LoadingScreenWidget.IsValid() )
 		{
@@ -149,7 +149,7 @@ void UTrueFPSGameViewportClient::HideDialog()
 			FSlateApplication::Get().SetKeyboardFocus( OldFocusWidget, EFocusCause::SetDirectly );
 		}
 
-		OldFocusWidget = NULL;
+		OldFocusWidget = nullptr;
 	}
 }
 
@@ -188,7 +188,7 @@ void UTrueFPSGameViewportClient::HideLoadingScreen()
 
 	RemoveViewportWidgetContent( LoadingScreenWidget.ToSharedRef() );
 
-	LoadingScreenWidget = NULL;
+	LoadingScreenWidget = nullptr;
 
 	// Show the dialog widget if we need to
 	if ( DialogWidget.IsValid() )
@@ -233,7 +233,7 @@ void UTrueFPSGameViewportClient::Tick(float DeltaSeconds)
 #if WITH_EDITOR
 void UTrueFPSGameViewportClient::DrawTransition(UCanvas* Canvas)
 {
-	if (GetOuterUEngine() != NULL)
+	if (GetOuterUEngine() != nullptr)
 	{
 		ETransitionType Type = GetOuterUEngine()->TransitionType;
 		switch (Type)

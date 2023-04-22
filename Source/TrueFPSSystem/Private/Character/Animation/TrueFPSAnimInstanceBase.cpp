@@ -78,7 +78,7 @@ void UTrueFPSAnimInstanceBase::OnCharacterInitialized()
 
 void UTrueFPSAnimInstanceBase::UpdateVariables(const float DeltaTime)
 {
-	if (Character->IsLocallyControlled())
+	if (Character->Implements<UTrueFPSCharacterInterface>() && ITrueFPSCharacterInterface::Execute_IsFirstPerson(Character))
 	{
 		const APlayerController* PlayerController = Character->GetController<APlayerController>();
 		if (!PlayerController)
@@ -87,7 +87,7 @@ void UTrueFPSAnimInstanceBase::UpdateVariables(const float DeltaTime)
 			return;
 		}
 
-		const FRotator LastUpdatedRotationValues = Character->Implements<UTrueFPSCharacterInterface>() ? ITrueFPSCharacterInterface::Execute_GetLastUpdatedRotationValues(Character) : FRotator::ZeroRotator;
+		const FRotator LastUpdatedRotationValues = ITrueFPSCharacterInterface::Execute_GetLastUpdatedRotationValues(Character);
 		
 		const FRotator AddRot(
 			LastUpdatedRotationValues.Pitch * PlayerController->InputPitchScale_DEPRECATED,
@@ -318,6 +318,7 @@ void UTrueFPSAnimInstanceBase::OnCharacterCurrentWeaponChanged()
 	{
 		const ATrueFPSWeaponBase* CurrentWeapon = ITrueFPSCharacterInterface::Execute_GetCurrentWeapon(Character);
 		const FWeaponAnimProperties AnimProperties = CurrentWeapon->GetAnimProperties();
+		AnimPose = AnimProperties.AnimPose;
 		CurrentWeightScale = AnimProperties.WeightScale;
 		CurrentWeaponCustomOffsetTransform = AnimProperties.CustomOffsetTransform;
 		CurrentAnimState = AnimProperties.AnimState;
@@ -330,6 +331,7 @@ void UTrueFPSAnimInstanceBase::OnCharacterCurrentWeaponChanged()
 	else
 	{
 		CurrentWeightScale = 0.f;
+		AnimPose = nullptr;
 		CurrentWeaponCustomOffsetTransform = FTransform::Identity;
 		SightsRelativeTransform = FTransform::Identity;
 		OriginRelativeTransform = FTransform::Identity;

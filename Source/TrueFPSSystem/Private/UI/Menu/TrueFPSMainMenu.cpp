@@ -984,7 +984,7 @@ void FTrueFPSMainMenu::OnMatchmakingComplete(FName SessionName, const FOnlineErr
 
 	UE_LOG(LogOnline, Log, TEXT("Matchmaking successful! Session name is %s."), *SessionName.ToString());
 
-	if (GetPlayerOwner() == NULL)
+	if (GetPlayerOwner() == nullptr)
 	{
 		UE_LOG(LogOnline, Warning, TEXT("OnMatchmakingComplete: No owner."));
 		return;
@@ -1184,7 +1184,7 @@ void FTrueFPSMainMenu::OnUIHostTeamDeathMatch()
 
 void FTrueFPSMainMenu::HostGame(const FString& GameType)
 {	
-	if (ensure(GameInstance.IsValid()) && GetPlayerOwner() != NULL)
+	if (ensure(GameInstance.IsValid()) && GetPlayerOwner() != nullptr)
 	{
 		FString const StartURL = FString::Printf(TEXT("/Game/Maps/%s?game=%s%s%s?%s=%d%s"), *GetMapName(), *GameType, GameInstance->GetOnlineMode() != EOnlineMode::Offline ? TEXT("?listen") : TEXT(""), GameInstance->GetOnlineMode() == EOnlineMode::LAN ? TEXT("?bIsLanMatch") : TEXT(""), *ATrueFPSGameMode::GetBotsCountOptionName(), BotsCountOpt, bIsRecordingDemo ? TEXT("?DemoRec") : TEXT("") );
 
@@ -1393,7 +1393,7 @@ void FTrueFPSMainMenu::OnUIQuit()
 
 	const FTrueFPSMenuSoundsStyle& MenuSounds = FTrueFPSStyle::Get().GetWidgetStyle<FTrueFPSMenuSoundsStyle>("DefaultTrueFPSMenuSoundsStyle");
 
-	if (GetTickableGameObjectWorld() != NULL && GetPlayerOwnerControllerId() != -1)
+	if (GetTickableGameObjectWorld() != nullptr && GetPlayerOwnerControllerId() != -1)
 	{
 		FSlateApplication::Get().PlaySound(MenuSounds.ExitGameSound, GetPlayerOwnerControllerId());
 		MenuHelper::PlaySoundAndCall(GetTickableGameObjectWorld(), MenuSounds.ExitGameSound, GetPlayerOwnerControllerId(), this, &FTrueFPSMainMenu::Quit);
@@ -1421,7 +1421,7 @@ void FTrueFPSMainMenu::LockAndHideMenu()
 void FTrueFPSMainMenu::DisplayLoadingScreen()
 {
 	ITrueFPSSystemLoadingScreenModule* LoadingScreenModule = FModuleManager::LoadModulePtr<ITrueFPSSystemLoadingScreenModule>("TrueFPSGameLoadingScreen");
-	if( LoadingScreenModule != NULL )
+	if( LoadingScreenModule != nullptr )
 	{
 		LoadingScreenModule->StartInGameLoadingScreen();
 	}

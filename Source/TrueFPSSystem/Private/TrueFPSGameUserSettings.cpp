@@ -40,7 +40,7 @@ void UTrueFPSGameUserSettings::ApplySettings(bool bCheckForCommandLineOverrides)
 void UTrueFPSGameUserSettings::InitNVIDIAReflex()
 {
 	UTrueFPSGameUserSettings* const UserSettings = CastChecked<UTrueFPSGameUserSettings>(GEngine->GetGameUserSettings());
-	if (UserSettings == NULL)
+	if (UserSettings == nullptr)
 		return;
 
 	TArray<IMaxTickRateHandlerModule*> MaxTickRateHandlerModules = IModularFeatures::Get().GetModularFeatureImplementations<IMaxTickRateHandlerModule>(IMaxTickRateHandlerModule::GetModularFeatureName());

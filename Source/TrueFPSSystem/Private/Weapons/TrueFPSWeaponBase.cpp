@@ -3,10 +3,12 @@
 
 #include "Weapons/TrueFPSWeaponBase.h"
 
+#include "AIController.h"
 #include "TrueFPSSystem.h"
 #include "Character/TrueFPSCharacterInterface.h"
 #include "GameFramework/Character.h"
 #include "VisualizationMacros.h"
+#include "Bots/TrueFPSAIController.h"
 #include "Character/TrueFPSPlayerController.h"
 #include "Components/AudioComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -734,7 +736,7 @@ void ATrueFPSWeaponBase::StopWeaponAnimation(const FWeaponAnim& Animation)
 
 FVector ATrueFPSWeaponBase::GetAdjustedAim() const
 {
-	APlayerController* const PlayerController = GetInstigatorController<APlayerController>();
+	ATrueFPSPlayerController* const PlayerController = GetInstigatorController<ATrueFPSPlayerController>();
 	FVector FinalAim = FVector::ZeroVector;
 	// If we have a player controller use it for the aim
 	if (PlayerController)
@@ -746,7 +748,16 @@ FVector ATrueFPSWeaponBase::GetAdjustedAim() const
 	}
 	else if (GetInstigator())
 	{
-		FinalAim = GetInstigator()->GetBaseAimRotation().Vector();
+		// Now see if we have an AI controller - we will want to get the aim from there if we do
+		ATrueFPSAIController* AIController = MyPawn ? Cast<ATrueFPSAIController>(MyPawn->Controller) : NULL;
+		if(AIController != NULL )
+		{
+			FinalAim = AIController->GetControlRotation().Vector();
+		}
+		else
+		{			
+			FinalAim = GetInstigator()->GetBaseAimRotation().Vector();
+		}
 	}
 
 	return FinalAim;
@@ -754,7 +765,7 @@ FVector ATrueFPSWeaponBase::GetAdjustedAim() const
 
 FVector ATrueFPSWeaponBase::GetCameraAim() const
 {
-	APlayerController* const PlayerController = GetInstigatorController<APlayerController>();
+	ATrueFPSPlayerController* const PlayerController = GetInstigatorController<ATrueFPSPlayerController>();
 	FVector FinalAim = FVector::ZeroVector;
 
 	if (PlayerController)
@@ -788,18 +799,6 @@ FVector ATrueFPSWeaponBase::GetCameraDamageStartLocation(const FVector& AimDir) 
 	}
 
 	return OutStartTrace;
-}
-
-FHitResult ATrueFPSWeaponBase::WeaponTrace(const FVector& StartTrace, const FVector& EndTrace) const
-{
-	// Perform trace to retrieve hit info
-	FCollisionQueryParams TraceParams(SCENE_QUERY_STAT(WeaponTrace), true, GetInstigator());
-	TraceParams.bReturnPhysicalMaterial = true;
-
-	FHitResult Hit(ForceInit);
-	GetWorld()->LineTraceSingleByChannel(Hit, StartTrace, EndTrace, COLLISION_WEAPON, TraceParams);
-
-	return Hit;
 }
 
 FTransform ATrueFPSWeaponBase::GetOffsetTransform() const

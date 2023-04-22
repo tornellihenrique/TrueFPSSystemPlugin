@@ -456,7 +456,7 @@ void STrueFPSMenuWidget::BuildLeftPanel(bool bInGoingBack)
 	}
 	
 	
-	TSharedPtr<FTrueFPSMenuItem> FirstMenuItem = CurrentMenu.IsValidIndex(SelectedIndex) ? CurrentMenu[SelectedIndex] : NULL;
+	TSharedPtr<FTrueFPSMenuItem> FirstMenuItem = CurrentMenu.IsValidIndex(SelectedIndex) ? CurrentMenu[SelectedIndex] : nullptr;
 	if (FirstMenuItem.IsValid() && FirstMenuItem->MenuItemType != ETrueFPSMenuItemType::CustomWidget)
 	{
 		FirstMenuItem->Widget->SetMenuItemActive(true);
@@ -625,8 +625,8 @@ void STrueFPSMenuWidget::Tick( const FGeometry& AllottedGeometry, const double I
 	SCompoundWidget::Tick( AllottedGeometry, InCurrentTime, InDeltaTime );
 
 	//ugly code seeing if the console is open
-	UConsole* ViewportConsole = (GEngine !=NULL && GEngine->GameViewport != NULL) ? GEngine->GameViewport->ViewportConsole : NULL;
-	if (ViewportConsole != NULL && (ViewportConsole->ConsoleState == "Typing" || ViewportConsole->ConsoleState == "Open"))
+	UConsole* ViewportConsole = (GEngine !=nullptr && GEngine->GameViewport != nullptr) ? GEngine->GameViewport->ViewportConsole : nullptr;
+	if (ViewportConsole != nullptr && (ViewportConsole->ConsoleState == "Typing" || ViewportConsole->ConsoleState == "Open"))
 	{
 		if (!bConsoleVisible)
 		{

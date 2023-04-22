@@ -51,7 +51,7 @@ struct FFireWeaponData
 	}
 };
 
-UCLASS(Abstract, Blueprintable)
+UCLASS(Abstract)
 class TRUEFPSSYSTEM_API ATrueFPSFireWeaponBase : public ATrueFPSWeaponBase
 {
 	GENERATED_BODY()
@@ -286,5 +286,10 @@ protected:
 
 	/** get direction of weapon's muzzle */
 	FVector GetMuzzleDirection() const;
+
+	/** find hit */
+	FHitResult WeaponTrace(const FVector& TraceFrom, const FVector& TraceTo) const;
+
+	virtual FVector GetCameraDamageStartLocation(const FVector& AimDir) const override;
 	
 };

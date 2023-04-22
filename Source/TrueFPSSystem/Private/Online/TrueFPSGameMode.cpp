@@ -5,21 +5,25 @@
 #include "EngineUtils.h"
 #include "TrueFPSGameInstance.h"
 #include "TrueFPSTeamStart.h"
+#include "Bots/TrueFPSAIController.h"
 #include "Character/TrueFPSCharacter.h"
 #include "Character/TrueFPSPlayerController.h"
 #include "Components/CapsuleComponent.h"
 #include "Engine/PlayerStartPIE.h"
 #include "Kismet/GameplayStatics.h"
+#include "Online/TrueFPSGameSession.h"
 #include "Online/TrueFPSGameState.h"
 #include "Online/TrueFPSPlayerState.h"
 #include "UI/TrueFPSHUD.h"
 
 ATrueFPSGameMode::ATrueFPSGameMode(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
+	// Should be set in Blueprints
 	// static ConstructorHelpers::FClassFinder<APawn> PlayerPawnOb(TEXT("/Game/Blueprints/Pawns/PlayerPawn"));
 	// DefaultPawnClass = PlayerPawnOb.Class;
-	
-	// static ConstructorHelpers::FClassFinder<APawn> BotPawnOb(TEXT("/Game/Blueprints/Pawns/BotPawn")); @todo implement bots
+
+	// Should be set in Blueprints
+	// static ConstructorHelpers::FClassFinder<APawn> BotPawnOb(TEXT("/Game/Blueprints/Pawns/BotPawn"));
 	// BotPawnClass = BotPawnOb.Class;
 
 	HUDClass = ATrueFPSHUD::StaticClass();
@@ -51,7 +55,7 @@ void ATrueFPSGameMode::PreInitializeComponents()
 
 void ATrueFPSGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
 {
-	const int32 BotsCountOptionValue = UGameplayStatics::GetIntOption(Options, GetBotsCountOptionName(), 0);
+	const int32 BotsCountOptionValue = BotsAmount > 0 ? BotsAmount : UGameplayStatics::GetIntOption(Options, GetBotsCountOptionName(), 0);
 	SetAllowBots(BotsCountOptionValue > 0 ? true : false, BotsCountOptionValue);	
 	Super::InitGame(MapName, Options, ErrorMessage);
 
@@ -178,10 +182,10 @@ bool ATrueFPSGameMode::ShouldSpawnAtStartSpot(AController* Player)
 
 UClass* ATrueFPSGameMode::GetDefaultPawnClassForController_Implementation(AController* InController)
 {
-	// if (InController->IsA<AShooterAIController>()) @todo implement bots
-	// {
-	// 	return BotPawnClass;
-	// }
+	if (InController->IsA<ATrueFPSAIController>())
+	{
+		return BotPawnClass;
+	}
 
 	return Super::GetDefaultPawnClassForController_Implementation(InController);
 }
@@ -372,19 +376,33 @@ void ATrueFPSGameMode::CreateBotControllers()
 	int32 ExistingBots = 0;
 	for (FConstControllerIterator It = World->GetControllerIterator(); It; ++It)
 	{		
-		// AShooterAIController* AIC = Cast<AShooterAIController>(*It); @todo implement bots
-		// if (AIC)
-		// {
-		// 	++ExistingBots;
-		// }
+		ATrueFPSAIController* AIC = Cast<ATrueFPSAIController>(*It);
+		if (AIC)
+		{
+			++ExistingBots;
+		}
 	}
 
 	// Create any necessary AIControllers.  Hold off on Pawn creation until pawns are actually necessary or need recreating.	
 	int32 BotNum = ExistingBots;
 	for (int32 i = 0; i < MaxBots - ExistingBots; ++i)
 	{
-		// CreateBot(BotNum + i); @todo implement bots
+		CreateBot(BotNum + i);
 	}
+}
+
+ATrueFPSAIController* ATrueFPSGameMode::CreateBot(int32 BotNum)
+{
+	FActorSpawnParameters SpawnInfo;
+	SpawnInfo.Instigator = nullptr;
+	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	SpawnInfo.OverrideLevel = nullptr;
+
+	UWorld* World = GetWorld();
+	ATrueFPSAIController* AIC = World->SpawnActor<ATrueFPSAIController>(SpawnInfo);
+	InitBot(AIC, BotNum);
+
+	return AIC;
 }
 
 void ATrueFPSGameMode::PostInitProperties()
@@ -402,12 +420,24 @@ void ATrueFPSGameMode::StartBots()
 	UWorld* World = GetWorld();
 	for (FConstControllerIterator It = World->GetControllerIterator(); It; ++It)
 	{		
-		// AShooterAIController* AIC = Cast<AShooterAIController>(*It); @todo implement bots
-		// if (AIC)
-		// {
-		// 	RestartPlayer(AIC);
-		// }
-	}	
+		ATrueFPSAIController* AIC = Cast<ATrueFPSAIController>(*It);
+		if (AIC)
+		{
+			RestartPlayer(AIC);
+		}
+	}
+}
+
+void ATrueFPSGameMode::InitBot(ATrueFPSAIController* AIController, int32 BotNum)
+{
+	if (AIController)
+	{
+		if (AIController->PlayerState)
+		{
+			FString BotName = FString::Printf(TEXT("Bot %d"), BotNum);
+			AIController->PlayerState->SetPlayerName(BotName);
+		}		
+	}
 }
 
 void ATrueFPSGameMode::DetermineMatchWinner()
@@ -422,16 +452,16 @@ bool ATrueFPSGameMode::IsWinner(ATrueFPSPlayerState* PlayerState) const
 
 bool ATrueFPSGameMode::IsSpawnpointAllowed(APlayerStart* SpawnPoint, AController* Player) const
 {
-	ATrueFPSTeamStart* TrueFPSTeamStart = Cast<ATrueFPSTeamStart>(SpawnPoint);
-	if (TrueFPSTeamStart)
+	ATrueFPSTeamStart* TrueFPSSpawnPoint = Cast<ATrueFPSTeamStart>(SpawnPoint);
+	if (TrueFPSSpawnPoint)
 	{
-		// AShooterAIController* AIController = Cast<AShooterAIController>(Player); @todo implement bots
-		// if (ShooterSpawnPoint->bNotForBots && AIController)
-		// {
-		// 	return false;
-		// }
+		ATrueFPSAIController* AIController = Cast<ATrueFPSAIController>(Player);
+		if (TrueFPSSpawnPoint->bNotForBots && AIController)
+		{
+			return false;
+		}
 
-		if (TrueFPSTeamStart->bNotForPlayers/* && AIController == nullptr @todo implement bots*/)
+		if (TrueFPSSpawnPoint->bNotForPlayers && AIController == nullptr)
 		{
 			return false;
 		}
@@ -444,11 +474,11 @@ bool ATrueFPSGameMode::IsSpawnpointAllowed(APlayerStart* SpawnPoint, AController
 bool ATrueFPSGameMode::IsSpawnpointPreferred(APlayerStart* SpawnPoint, AController* Player) const
 {
 	ACharacter* MyPawn = Cast<ACharacter>((*DefaultPawnClass)->GetDefaultObject<ACharacter>());	
-	// AShooterAIController* AIController = Cast<AShooterAIController>(Player); @todo implement bots
-	// if( AIController != nullptr )
-	// {
-	// 	MyPawn = Cast<ACharacter>(BotPawnClass->GetDefaultObject<ACharacter>());
-	// }
+	ATrueFPSAIController* AIController = Cast<ATrueFPSAIController>(Player);
+	if( AIController != nullptr )
+	{
+		MyPawn = Cast<ACharacter>(BotPawnClass->GetDefaultObject<ACharacter>());
+	}
 	
 	if (MyPawn)
 	{
@@ -479,7 +509,7 @@ bool ATrueFPSGameMode::IsSpawnpointPreferred(APlayerStart* SpawnPoint, AControll
 
 TSubclassOf<AGameSession> ATrueFPSGameMode::GetGameSessionClass() const
 {
-	return Super::GetGameSessionClass(); // @todo implement game session
+	return ATrueFPSGameSession::StaticClass();
 }
 
 void ATrueFPSGameMode::FinishMatch()

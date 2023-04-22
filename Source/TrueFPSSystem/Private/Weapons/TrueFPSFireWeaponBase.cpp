@@ -4,11 +4,14 @@
 
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
+#include "TrueFPSSystem.h"
+#include "Bots/TrueFPSAIController.h"
 #include "Character/TrueFPSCharacterInterface.h"
 #include "Character/TrueFPSPlayerController.h"
 #include "GameFramework/Character.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
+#include "Online/TrueFPSPlayerState.h"
 
 ATrueFPSFireWeaponBase::ATrueFPSFireWeaponBase(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -62,13 +65,13 @@ int32 ATrueFPSFireWeaponBase::GetMaxAmmo() const
 
 bool ATrueFPSFireWeaponBase::HasInfiniteAmmo() const
 {
-	const ATrueFPSPlayerController* MyPC = (MyPawn != NULL) ? Cast<const ATrueFPSPlayerController>(MyPawn->Controller) : NULL;
+	const ATrueFPSPlayerController* MyPC = (MyPawn != nullptr) ? Cast<const ATrueFPSPlayerController>(MyPawn->Controller) : nullptr;
 	return FireWeaponConfig.bInfiniteAmmo || (MyPC && MyPC->HasInfiniteAmmo());
 }
 
 bool ATrueFPSFireWeaponBase::HasInfiniteClip() const
 {
-	const ATrueFPSPlayerController* MyPC = (MyPawn != NULL) ? Cast<const ATrueFPSPlayerController>(MyPawn->Controller) : NULL;
+	const ATrueFPSPlayerController* MyPC = (MyPawn != nullptr) ? Cast<const ATrueFPSPlayerController>(MyPawn->Controller) : nullptr;
 	return FireWeaponConfig.bInfiniteClip || (MyPC && MyPC->HasInfiniteClip());
 }
 
@@ -77,6 +80,12 @@ void ATrueFPSFireWeaponBase::GiveAmmo(int AddAmount)
 	const int32 MissingAmmo = FMath::Max(0, FireWeaponConfig.MaxAmmo - CurrentAmmo);
 	AddAmount = FMath::Min(AddAmount, MissingAmmo);
 	CurrentAmmo += AddAmount;
+
+	ATrueFPSAIController* BotAI = MyPawn ? Cast<ATrueFPSAIController>(MyPawn->GetController()) : NULL;
+	if (BotAI)
+	{
+		BotAI->CheckAmmo(this);
+	}
 	
 	// start reload if clip was empty
 	if (GetCurrentAmmoInClip() <= 0 &&
@@ -97,6 +106,20 @@ void ATrueFPSFireWeaponBase::UseAmmo()
 	if (!HasInfiniteAmmo() && !HasInfiniteClip())
 	{
 		CurrentAmmo--;
+	}
+
+	ATrueFPSAIController* BotAI = MyPawn ? Cast<ATrueFPSAIController>(MyPawn->GetController()) : NULL;	
+	ATrueFPSPlayerController* PlayerController = MyPawn ? Cast<ATrueFPSPlayerController>(MyPawn->GetController()) : NULL;
+	if (BotAI)
+	{
+		BotAI->CheckAmmo(this);
+	}
+	else if(PlayerController)
+	{
+		if (ATrueFPSPlayerState* PlayerState = Cast<ATrueFPSPlayerState>(PlayerController->PlayerState))
+		{
+			PlayerState->AddBulletsFired(1);
+		}
 	}
 }
 
@@ -485,4 +508,39 @@ FVector ATrueFPSFireWeaponBase::GetMuzzleDirection() const
 {
 	USkeletalMeshComponent* UseMesh = GetWeaponMesh();
 	return UseMesh->GetSocketRotation(MuzzleAttachPoint).Vector();
+}
+
+FHitResult ATrueFPSFireWeaponBase::WeaponTrace(const FVector& StartTrace, const FVector& EndTrace) const
+{
+	// Perform trace to retrieve hit info
+	FCollisionQueryParams TraceParams(SCENE_QUERY_STAT(WeaponTrace), true, GetInstigator());
+	TraceParams.bReturnPhysicalMaterial = true;
+
+	FHitResult Hit(ForceInit);
+	GetWorld()->LineTraceSingleByChannel(Hit, StartTrace, EndTrace, COLLISION_WEAPON, TraceParams);
+
+	return Hit;
+}
+
+FVector ATrueFPSFireWeaponBase::GetCameraDamageStartLocation(const FVector& AimDir) const
+{
+	ATrueFPSPlayerController* PC = MyPawn ? Cast<ATrueFPSPlayerController>(MyPawn->Controller) : NULL;
+	ATrueFPSAIController* AIPC = MyPawn ? Cast<ATrueFPSAIController>(MyPawn->Controller) : NULL;
+	FVector OutStartTrace = FVector::ZeroVector;
+
+	if (PC)
+	{
+		// use player's camera
+		FRotator UnusedRot;
+		PC->GetPlayerViewPoint(OutStartTrace, UnusedRot);
+
+		// Adjust trace so there is nothing blocking the ray between the camera and the pawn, and calculate distance from adjusted start
+		OutStartTrace = OutStartTrace + AimDir * ((GetInstigator()->GetActorLocation() - OutStartTrace) | AimDir);
+	}
+	else if (AIPC)
+	{
+		OutStartTrace = GetMuzzleLocation();
+	}
+
+	return OutStartTrace;
 }

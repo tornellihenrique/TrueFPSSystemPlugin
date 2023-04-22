@@ -161,7 +161,7 @@ void FTrueFPSIngameMenu::DetachGameMenu()
 
 		// If the game is over enable the scoreboard
 		ATrueFPSHUD* const TrueFPSHUD = PCOwner->GetTrueFPSHUD();
-		if( ( TrueFPSHUD != NULL ) && ( TrueFPSHUD->IsMatchOver() == true ) && ( PCOwner->IsPrimaryPlayer() == true ) )
+		if( ( TrueFPSHUD != nullptr ) && ( TrueFPSHUD->IsMatchOver() == true ) && ( PCOwner->IsPrimaryPlayer() == true ) )
 		{
 			TrueFPSHUD->ShowScoreboard( true, true );
 		}
@@ -199,7 +199,7 @@ void FTrueFPSIngameMenu::ToggleGameMenu()
 		if (PCOwner)
 		{
 			ATrueFPSHUD* const TrueFPSHUD = PCOwner->GetTrueFPSHUD();
-			if( TrueFPSHUD != NULL )
+			if( TrueFPSHUD != nullptr )
 			{
 				TrueFPSHUD->ShowScoreboard( false );
 			}
@@ -254,7 +254,7 @@ void FTrueFPSIngameMenu::ToggleGameMenu()
 
 			// Don't renable controls if the match is over
 			ATrueFPSHUD* const TrueFPSHUD = PCOwner->GetTrueFPSHUD();
-			if( ( TrueFPSHUD != NULL ) && ( TrueFPSHUD->IsMatchOver() == false ) )
+			if( ( TrueFPSHUD != nullptr ) && ( TrueFPSHUD->IsMatchOver() == false ) )
 			{
 				PCOwner->SetCinematicMode(false,false,false,true,true);
 

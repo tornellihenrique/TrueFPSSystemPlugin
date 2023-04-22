@@ -180,7 +180,7 @@ public:
 	 */
 	void UpdateAchievementProgress( const FString& Id, float Percent );
 
-	/** Returns a pointer to the TrueFPS game hud. May return NULL. */
+	/** Returns a pointer to the TrueFPS game hud. May return nullptr. */
 	class ATrueFPSHUD* GetTrueFPSHUD() const;
 
 	/** Returns the persistent user record associated with this player, or null if there is't one. */

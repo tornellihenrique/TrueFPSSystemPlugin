@@ -207,7 +207,7 @@ bool STrueFPSLeaderboard::ProfileUIOpened() const
 
 		const TSharedPtr<const FUniqueNetId>& PlayerId = SelectedItem->PlayerId;
 		check( PlayerId.IsValid() );
-		return TrueFPSUIHelpers::Get().ProfileOpenedUI(GetWorld(), *OwnerNetId, *PlayerId.Get(), NULL);
+		return TrueFPSUIHelpers::Get().ProfileOpenedUI(GetWorld(), *OwnerNetId, *PlayerId.Get(), nullptr);
 	}
 	return false;
 }

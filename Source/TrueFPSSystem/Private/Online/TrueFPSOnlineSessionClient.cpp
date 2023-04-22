@@ -16,7 +16,7 @@ void UTrueFPSOnlineSessionClient::OnSessionUserInviteAccepted(
 	const FOnlineSessionSearchResult &	InviteResult
 )
 {
-	UE_LOG(LogOnline, Verbose, TEXT("HandleSessionUserInviteAccepted: bSuccess: %d, ControllerId: %d, User: %s"), bWasSuccess, ControllerId, UserId.IsValid() ? *UserId->ToString() : TEXT("NULL"));
+	UE_LOG(LogOnline, Verbose, TEXT("HandleSessionUserInviteAccepted: bSuccess: %d, ControllerId: %d, User: %s"), bWasSuccess, ControllerId, UserId.IsValid() ? *UserId->ToString() : TEXT("nullptr"));
 
 	if (!bWasSuccess)
 	{

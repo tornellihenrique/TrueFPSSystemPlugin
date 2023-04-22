@@ -155,9 +155,9 @@ public:
 	
 	FTakeHitInfo()
 		: ActualDamage(0)
-		, DamageTypeClass(NULL)
-		, PawnInstigator(NULL)
-		, DamageCauser(NULL)
+		, DamageTypeClass(nullptr)
+		, PawnInstigator(nullptr)
+		, DamageCauser(nullptr)
 		, DamageEventClassID(0)
 		, bKilled(false)
 		, EnsureReplicationByte(0)
@@ -168,21 +168,21 @@ public:
 		switch (DamageEventClassID)
 		{
 		case FPointDamageEvent::ClassID:
-			if (PointDamageEvent.DamageTypeClass == NULL)
+			if (PointDamageEvent.DamageTypeClass == nullptr)
 			{
 				PointDamageEvent.DamageTypeClass = DamageTypeClass ? DamageTypeClass : UDamageType::StaticClass();
 			}
 			return PointDamageEvent;
 
 		case FRadialDamageEvent::ClassID:
-			if (RadialDamageEvent.DamageTypeClass == NULL)
+			if (RadialDamageEvent.DamageTypeClass == nullptr)
 			{
 				RadialDamageEvent.DamageTypeClass = DamageTypeClass ? DamageTypeClass : UDamageType::StaticClass();
 			}
 			return RadialDamageEvent;
 
 		default:
-			if (GeneralDamageEvent.DamageTypeClass == NULL)
+			if (GeneralDamageEvent.DamageTypeClass == nullptr)
 			{
 				GeneralDamageEvent.DamageTypeClass = DamageTypeClass ? DamageTypeClass : UDamageType::StaticClass();
 			}

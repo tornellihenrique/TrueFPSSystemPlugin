@@ -226,7 +226,7 @@ void FTrueFPSWelcomeMenu::HandleLoginUIClosed(TSharedPtr<const FUniqueNetId> Uni
 	const bool bIsLicensed = GenericApplication->ApplicationLicenseValid();
 
 	// If they don't currently have a license, let them know, but don't let them proceed
-	if (!bIsLicensed && TrueFPSViewport != NULL)
+	if (!bIsLicensed && TrueFPSViewport != nullptr)
 	{
 		const FText StopReason	= NSLOCTEXT( "ProfileMessages", "NeedLicense", "The signed in users do not have a license for this game. Please purchase TrueFPSSystem from the Xbox Marketplace or sign in a user with a valid license." );
 		const FText OKButton	= NSLOCTEXT( "DialogButtons", "OKAY", "OK" );
@@ -267,7 +267,7 @@ void FTrueFPSWelcomeMenu::HandleLoginUIClosed(TSharedPtr<const FUniqueNetId> Uni
 	else
 	{
 		// Show a warning that your progress won't be saved if you continue without logging in. 
-		if (TrueFPSViewport != NULL)
+		if (TrueFPSViewport != nullptr)
 		{
 			TrueFPSViewport->ShowDialog( 
 				nullptr,
@@ -315,7 +315,7 @@ FReply FTrueFPSWelcomeMenu::OnContinueWithoutSavingConfirm()
 
 	UTrueFPSGameViewportClient * TrueFPSViewport = Cast<UTrueFPSGameViewportClient>( GameInstance->GetGameViewportClient() );
 
-	if (TrueFPSViewport != NULL)
+	if (TrueFPSViewport != nullptr)
 	{
 		TrueFPSViewport->HideDialog();
 	}
@@ -333,7 +333,7 @@ FReply FTrueFPSWelcomeMenu::OnConfirmGeneric()
 
 	UTrueFPSGameViewportClient * TrueFPSViewport = Cast<UTrueFPSGameViewportClient>( GameInstance->GetGameViewportClient() );
 
-	if (TrueFPSViewport != NULL)
+	if (TrueFPSViewport != nullptr)
 	{
 		TrueFPSViewport->HideDialog();
 	}
@@ -351,7 +351,7 @@ void FTrueFPSWelcomeMenu::OnUserCanPlay(const FUniqueNetId& UserId, EUserPrivile
 	{
 		UTrueFPSGameViewportClient * TrueFPSViewport = Cast<UTrueFPSGameViewportClient>( GameInstance->GetGameViewportClient() );
 
-		if ( TrueFPSViewport != NULL )
+		if ( TrueFPSViewport != nullptr )
 		{
 			const FText ReturnReason = NSLOCTEXT("PrivilegeFailures", "CannotPlayAgeRestriction", "You cannot play this game due to age restrictions.");
 			const FText OKButton = NSLOCTEXT("DialogButtons", "OKAY", "OK");
