@@ -1,6 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "STrueFPSMenuWidget.h"
+#include "TrueFPSSystem.h"
 #include "Engine/Console.h"
 #include "TrueFPSMenuItem.h"
 #include "STrueFPSMenuItem.h"

@@ -8,6 +8,7 @@
 #include "Online/TrueFPSGameState.h"
 #include "UI/Style/TrueFPSStyle.h"
 #include "Widgets/STrueFPSMenuWidget.h"
+#include "UI/Style/TrueFPSOptionsWidgetStyle.h"
 
 #define LOCTEXT_NAMESPACE "TrueFPSSystem.HUD.Menu"
 

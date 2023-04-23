@@ -2,6 +2,7 @@
 
 #include "STrueFPSServerList.h"
 
+#include "TrueFPSSystem.h"
 #include "TrueFPSGameInstance.h"
 #include "Online/TrueFPSGameSession.h"
 #include "UI/Style/TrueFPSStyle.h"
