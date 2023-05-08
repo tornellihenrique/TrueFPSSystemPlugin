@@ -2,6 +2,7 @@
 
 #include "TrueFPSDemoPlaybackMenu.h"
 
+#include "TrueFPSSystem.h"
 #include "TrueFPSGameInstance.h"
 #include "Character/TrueFPSPlayerController.h"
 #include "UI/Style/TrueFPSMenuSoundsWidgetStyle.h"

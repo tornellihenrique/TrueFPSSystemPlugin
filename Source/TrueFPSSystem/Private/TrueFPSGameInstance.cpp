@@ -2,6 +2,7 @@
 
 #include "TrueFPSGameInstance.h"
 
+#include "TrueFPSSystem.h"
 #include "OnlineSubsystem.h"
 #include "OnlineSubsystemUtils.h"
 #include "TrueFPSGameUserSettings.h"

@@ -2,6 +2,7 @@
 
 #include "TrueFPSHUDPCTrackerBase.h"
 
+#include "Online/TrueFPSGameState.h"
 #include "Character/TrueFPSPlayerController.h"
 
 /** Initialize with a world context. */
