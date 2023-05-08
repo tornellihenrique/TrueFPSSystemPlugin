@@ -537,7 +537,7 @@ FVector ATrueFPSPlayerController::GetFocalLocation() const
 
 	// On death we want to use the player's death cam location rather than the location of where the pawn is at the moment
 	// This guarantees that the clients see their death cam correctly, as their pawns have delayed destruction.
-	if (TrueFPSCharacter && TrueFPSCharacter->bIsDying)
+	if (TrueFPSCharacter && TrueFPSCharacter->GetIsDying())
 	{
 		return GetSpawnLocation();
 	}

@@ -15,12 +15,12 @@ float UTrueFPSCharacterMovement::GetMaxSpeed() const
 
 	if (const ATrueFPSCharacter* TrueFPSCharacter = Cast<ATrueFPSCharacter>(PawnOwner))
 	{
-		if (TrueFPSCharacter->IsPlayerAiming())
+		if (TrueFPSCharacter->IsAiming())
 		{
 			MaxSpeed *= TrueFPSCharacter->GetAimingSpeedModifier();
 		}
 		
-		if (TrueFPSCharacter->IsPlayerRunning())
+		if (TrueFPSCharacter->IsRunning())
 		{
 			MaxSpeed *= TrueFPSCharacter->GetRunningSpeedModifier();
 		}

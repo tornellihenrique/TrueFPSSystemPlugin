@@ -13,11 +13,6 @@ ATrueFPSBot::ATrueFPSBot(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	bUseControllerRotationYaw = true;
 }
 
-bool ATrueFPSBot::IsFirstPersonPlayer() const
-{
-	return false;
-}
-
 void ATrueFPSBot::FaceRotation(FRotator NewRotation, float DeltaTime)
 {
 	FRotator CurrentRotation = FMath::RInterpTo(GetActorRotation(), NewRotation, DeltaTime, 8.0f);

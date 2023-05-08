@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Settings/TrueFPSFireWeaponProjectileSettings.h"
 #include "Weapons/TrueFPSFireWeaponProjectile.h"
 #include "TrueFPSProjectile.generated.h"
 
@@ -52,7 +53,8 @@ protected:
 	TWeakObjectPtr<AController> MyController;
 
 	/** projectile data */
-	FProjectileWeaponData WeaponConfig;
+	UPROPERTY()
+	UTrueFPSFireWeaponProjectileSettings* WeaponConfig;
 
 	/** did it explode? */
 	UPROPERTY(Transient, ReplicatedUsing=OnRep_Exploded)

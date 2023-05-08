@@ -18,8 +18,6 @@ public:
 	UPROPERTY(EditAnywhere, Category=Behavior)
 	class UBehaviorTree* BotBehavior;
 
-	virtual bool IsFirstPersonPlayer() const override;
-
 	virtual void FaceRotation(FRotator NewRotation, float DeltaTime = 0.f) override;
 	
 };

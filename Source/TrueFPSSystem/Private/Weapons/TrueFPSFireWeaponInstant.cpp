@@ -4,7 +4,6 @@
 #include "Weapons/TrueFPSFireWeaponInstant.h"
 
 #include "NiagaraFunctionLibrary.h"
-#include "NiagaraSystem.h"
 #include "NiagaraComponent.h"
 #include "NiagaraDataInterfaceArrayFunctionLibrary.h"
 #include "GameFramework/Character.h"
@@ -22,10 +21,10 @@ ATrueFPSFireWeaponInstant::ATrueFPSFireWeaponInstant(const FObjectInitializer& O
 
 float ATrueFPSFireWeaponInstant::GetCurrentSpread() const
 {
-	float FinalSpread = InstantConfig.WeaponSpread + CurrentFiringSpread;
-	if (MyPawn && MyPawn->Implements<UTrueFPSCharacterInterface>() && ITrueFPSCharacterInterface::Execute_IsAiming(MyPawn))
+	float FinalSpread = FireInstantSettings->WeaponSpread + CurrentFiringSpread;
+	if (MyPawn && MyPawn->Implements<UTrueFPSCharacterInterface>() && ITrueFPSCharacterInterface::Execute_TrueFPSInterface_IsAiming(MyPawn))
 	{
-		FinalSpread *= InstantConfig.TargetingSpreadMod;
+		FinalSpread *= FireInstantSettings->TargetingSpreadMod;
 	}
 
 	return FinalSpread;
@@ -44,9 +43,9 @@ void ATrueFPSFireWeaponInstant::ServerNotifyHit_Implementation(const FHitResult&
 
 		// is the angle between the hit and the view within allowed limits (limit + weapon max angle)
 		const float ViewDotHitDir = FVector::DotProduct(GetInstigator()->GetViewRotation().Vector(), ViewDir);
-		if (ViewDotHitDir > InstantConfig.AllowedViewDotHitDir - WeaponAngleDot)
+		if (ViewDotHitDir > FireInstantSettings->AllowedViewDotHitDir - WeaponAngleDot)
 		{
-			if (CurrentState != EWeaponState::Idle)
+			if (State.CurrentState != EWeaponState::Idle)
 			{
 				if (Impact.GetActor() == nullptr)
 				{
@@ -68,7 +67,7 @@ void ATrueFPSFireWeaponInstant::ServerNotifyHit_Implementation(const FHitResult&
 
 					// calculate the box extent, and increase by a leeway
 					FVector BoxExtent = 0.5 * (HitBox.Max - HitBox.Min);
-					BoxExtent *= InstantConfig.ClientSideHitLeeway;
+					BoxExtent *= FireInstantSettings->ClientSideHitLeeway;
 
 					// avoid precision errors with really thin objects
 					BoxExtent.X = FMath::Max(20.0f, BoxExtent.X);
@@ -92,7 +91,7 @@ void ATrueFPSFireWeaponInstant::ServerNotifyHit_Implementation(const FHitResult&
 				}
 			}
 		}
-		else if (ViewDotHitDir <= InstantConfig.AllowedViewDotHitDir)
+		else if (ViewDotHitDir <= FireInstantSettings->AllowedViewDotHitDir)
 		{
 			UE_LOG(LogTemp, Log, TEXT("%s Rejected client side hit of %s (facing too far from the hit direction)"), *GetNameSafe(this), *GetNameSafe(Impact.GetActor()));
 		}
@@ -103,8 +102,7 @@ void ATrueFPSFireWeaponInstant::ServerNotifyHit_Implementation(const FHitResult&
 	}
 }
 
-void ATrueFPSFireWeaponInstant::ServerNotifyMiss_Implementation(FVector_NetQuantizeNormal ShootDir, int32 RandomSeed,
-	float ReticleSpread)
+void ATrueFPSFireWeaponInstant::ServerNotifyMiss_Implementation(FVector_NetQuantizeNormal ShootDir, int32 RandomSeed, float ReticleSpread)
 {
 	const FVector Origin = GetMuzzleLocation();
 
@@ -116,7 +114,7 @@ void ATrueFPSFireWeaponInstant::ServerNotifyMiss_Implementation(FVector_NetQuant
 	// play FX locally
 	if (GetNetMode() != NM_DedicatedServer)
 	{
-		const FVector EndTrace = Origin + ShootDir * InstantConfig.WeaponRange;
+		const FVector EndTrace = Origin + ShootDir * FireInstantSettings->WeaponRange;
 		SpawnTrailEffect(EndTrace);
 	}
 }
@@ -171,7 +169,7 @@ void ATrueFPSFireWeaponInstant::ProcessInstantHit_Confirmed(const FHitResult& Im
 	// play FX locally
 	if (GetNetMode() != NM_DedicatedServer)
 	{
-		const FVector EndTrace = Origin + ShootDir * InstantConfig.WeaponRange;
+		const FVector EndTrace = Origin + ShootDir * FireInstantSettings->WeaponRange;
 		const FVector EndPoint = Impact.GetActor() ? Impact.ImpactPoint : EndTrace;
 
 		SpawnTrailEffect(EndPoint);
@@ -198,10 +196,10 @@ bool ATrueFPSFireWeaponInstant::ShouldDealDamage(AActor* TestActor) const
 void ATrueFPSFireWeaponInstant::DealDamage(const FHitResult& Impact, const FVector& ShootDir)
 {
 	FPointDamageEvent PointDmg;
-	PointDmg.DamageTypeClass = InstantConfig.DamageType;
+	PointDmg.DamageTypeClass = FireInstantSettings->DamageType;
 	PointDmg.HitInfo = Impact;
 	PointDmg.ShotDirection = ShootDir;
-	PointDmg.Damage = InstantConfig.HitDamage;
+	PointDmg.Damage = FireInstantSettings->HitDamage;
 
 	Impact.GetActor()->TakeDamage(PointDmg.Damage, PointDmg, MyPawn->Controller, this);
 
@@ -218,12 +216,12 @@ void ATrueFPSFireWeaponInstant::FireWeapon()
 	const FVector AimDir = GetAdjustedAim();
 	const FVector StartTrace = GetCameraDamageStartLocation(AimDir);
 	const FVector ShootDir = WeaponRandomStream.VRandCone(AimDir, ConeHalfAngle, ConeHalfAngle);
-	const FVector EndTrace = StartTrace + ShootDir * InstantConfig.WeaponRange;
+	const FVector EndTrace = StartTrace + ShootDir * FireInstantSettings->WeaponRange;
 
 	const FHitResult Impact = WeaponTrace(StartTrace, EndTrace);
 	ProcessInstantHit(Impact, StartTrace, ShootDir, RandomSeed, CurrentSpread);
 
-	CurrentFiringSpread = FMath::Min(InstantConfig.FiringSpreadMax, CurrentFiringSpread + InstantConfig.FiringSpreadIncrement);
+	CurrentFiringSpread = FMath::Min(FireInstantSettings->FiringSpreadMax, CurrentFiringSpread + FireInstantSettings->FiringSpreadIncrement);
 }
 
 void ATrueFPSFireWeaponInstant::OnBurstFinished()
@@ -246,7 +244,7 @@ void ATrueFPSFireWeaponInstant::SimulateInstantHit(const FVector& ShotOrigin, in
 	const FVector StartTrace = ShotOrigin;
 	const FVector AimDir = GetAdjustedAim();
 	const FVector ShootDir = WeaponRandomStream.VRandCone(AimDir, ConeHalfAngle, ConeHalfAngle);
-	const FVector EndTrace = StartTrace + ShootDir * InstantConfig.WeaponRange;
+	const FVector EndTrace = StartTrace + ShootDir * FireInstantSettings->WeaponRange;
 
 	FHitResult Impact = WeaponTrace(StartTrace, EndTrace);
 	if (Impact.bBlockingHit)
@@ -262,7 +260,7 @@ void ATrueFPSFireWeaponInstant::SimulateInstantHit(const FVector& ShotOrigin, in
 
 void ATrueFPSFireWeaponInstant::SpawnImpactEffects(const FHitResult& Impact)
 {
-	if (ImpactTemplate && Impact.bBlockingHit)
+	if (FireInstantSettings->ImpactTemplate && Impact.bBlockingHit)
 	{
 		FHitResult UseImpact = Impact;
 	
@@ -276,7 +274,7 @@ void ATrueFPSFireWeaponInstant::SpawnImpactEffects(const FHitResult& Impact)
 		}
 	
 		FTransform const SpawnTransform(Impact.ImpactNormal.Rotation(), Impact.ImpactPoint);
-		ATrueFPSImpactEffect* EffectActor = GetWorld()->SpawnActorDeferred<ATrueFPSImpactEffect>(ImpactTemplate, SpawnTransform);
+		ATrueFPSImpactEffect* EffectActor = GetWorld()->SpawnActorDeferred<ATrueFPSImpactEffect>(FireInstantSettings->ImpactTemplate, SpawnTransform);
 		if (EffectActor)
 		{
 			EffectActor->SurfaceHit = UseImpact;
@@ -287,30 +285,29 @@ void ATrueFPSFireWeaponInstant::SpawnImpactEffects(const FHitResult& Impact)
 
 void ATrueFPSFireWeaponInstant::SpawnTrailEffect(const FVector& EndPoint)
 {
-	if (TrailFX)
+	if (IsValid(FireInstantSettings->TrailFX))
 	{
 		const FVector Origin = GetMuzzleLocation();
 
-		UParticleSystemComponent* TrailPSC = UGameplayStatics::SpawnEmitterAtLocation(this, TrailFX, Origin);
+		UParticleSystemComponent* TrailPSC = UGameplayStatics::SpawnEmitterAtLocation(this, FireInstantSettings->TrailFX, Origin);
 		if (TrailPSC)
 		{
-			TrailPSC->SetVectorParameter(TrailTargetParam, EndPoint);
+			TrailPSC->SetVectorParameter(FireInstantSettings->TrailTargetParam, EndPoint);
 		}
 	}
 
-	if (NiagaraTrailFX.LoadSynchronous())
+	if (IsValid(FireInstantSettings->NiagaraTrailFX))
 	{
 		const FVector Origin = GetMuzzleLocation();
 		const FRotator OriginRotation = GetMuzzleDirection().Rotation();
 
-		UNiagaraComponent* TrailNC = UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, NiagaraTrailFX.Get(), Origin, OriginRotation);
-		if (TrailNC)
+		if (UNiagaraComponent* TrailNC = UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, FireInstantSettings->NiagaraTrailFX.Get(), Origin, OriginRotation))
 		{
-			TrailNC->SetNiagaraVariableBool(NiagaraTrailTriggerParam.ToString(), true);
+			TrailNC->SetNiagaraVariableBool(FireInstantSettings->NiagaraTrailTriggerParam.ToString(), true);
 
 			TArray<FVector> EndPoints;
 			EndPoints.Add(EndPoint);
-			UNiagaraDataInterfaceArrayFunctionLibrary::SetNiagaraArrayVector(TrailNC, NiagaraTrailTargetParam, EndPoints);
+			UNiagaraDataInterfaceArrayFunctionLibrary::SetNiagaraArrayVector(TrailNC, FireInstantSettings->NiagaraTrailTargetParam, EndPoints);
 		}
 	}
 }

@@ -3,13 +3,11 @@
 
 #include "Weapons/TrueFPSWeaponBase.h"
 
-#include "AIController.h"
 #include "TrueFPSSystem.h"
 #include "Character/TrueFPSCharacterInterface.h"
 #include "GameFramework/Character.h"
 #include "VisualizationMacros.h"
 #include "Bots/TrueFPSAIController.h"
-#include "Character/TrueFPSPlayerController.h"
 #include "Components/AudioComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -20,7 +18,7 @@
 
 ATrueFPSWeaponBase::ATrueFPSWeaponBase(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
-	Mesh1P = ObjectInitializer.CreateDefaultSubobject<USkeletalMeshComponent>(this, TEXT("WeaponMesh1P"));
+	Mesh1P = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh1P"));
 	Mesh1P->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;
 	Mesh1P->bReceivesDecals = false;
 	Mesh1P->CastShadow = true;
@@ -29,7 +27,7 @@ ATrueFPSWeaponBase::ATrueFPSWeaponBase(const FObjectInitializer& ObjectInitializ
 	Mesh1P->SetCollisionResponseToAllChannels(ECR_Ignore);
 	RootComponent = Mesh1P;
 
-	Mesh3P = ObjectInitializer.CreateDefaultSubobject<USkeletalMeshComponent>(this, TEXT("WeaponMesh3P"));
+	Mesh3P = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh3P"));
 	Mesh3P->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;
 	Mesh3P->bReceivesDecals = false;
 	Mesh3P->CastShadow = true;
@@ -41,18 +39,6 @@ ATrueFPSWeaponBase::ATrueFPSWeaponBase(const FObjectInitializer& ObjectInitializ
 	Mesh3P->SetCollisionResponseToChannel(COLLISION_PROJECTILE, ECR_Block);
 	Mesh3P->SetupAttachment(Mesh1P);
 
-	bLoopedFireAnim = false;
-	bPlayingFireAnim = false;
-	bIsEquipped = false;
-	bWantsToFire = false;
-	bPendingEquip = false;
-	CurrentState = EWeaponState::Idle;
-	BurstCounter = 0;
-	LastFireTime = 0.0f;
-	
-	RecoilResetSpeed = 5.f;
-	RecoilSpeed = 10.f;
-
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.TickGroup = TG_PrePhysics;
 	SetRemoteRoleForBackwardsCompat(ROLE_SimulatedProxy);
@@ -62,6 +48,8 @@ ATrueFPSWeaponBase::ATrueFPSWeaponBase(const FObjectInitializer& ObjectInitializ
 
 void ATrueFPSWeaponBase::BeginPlay()
 {
+	check(IsValid(Settings));
+	
 #if WITH_EDITORONLY_DATA
 	if (OriginWidgetComp)
 	{
@@ -83,17 +71,19 @@ void ATrueFPSWeaponBase::BeginPlay()
 	TargetSightsRelativeTransform = GetDefaultSightsRelativeTransform();
 }
 
-void ATrueFPSWeaponBase::Tick(float DeltaSeconds)
+void ATrueFPSWeaponBase::Tick(const float DeltaTime)
 {
-	Super::Tick(DeltaSeconds);
+	Super::Tick(DeltaTime);
 
-	HandleRecoil(DeltaSeconds);
+	HandleRecoil(DeltaTime);
+	
+	RefreshCameraRecoil(DeltaTime);
 
 	// Smooth sights toggling
-	SightsRelativeTransform = UKismetMathLibrary::TInterpTo(SightsRelativeTransform, TargetSightsRelativeTransform, DeltaSeconds, 8.f);
+	State.SightsRelativeTransform = UKismetMathLibrary::TInterpTo(State.SightsRelativeTransform, TargetSightsRelativeTransform, DeltaTime, 8.f);
 
 	// Smooth wall offset
-	WallOffsetTransformAlpha = UKismetMathLibrary::FInterpTo(WallOffsetTransformAlpha, CalculateWallOffsetTransformAlpha(), DeltaSeconds, 8.f);
+	State.WallOffsetTransformAlpha = UKismetMathLibrary::FInterpTo(State.WallOffsetTransformAlpha, CalculateWallOffsetTransformAlpha(), DeltaTime, 8.f);
 }
 
 void ATrueFPSWeaponBase::PostInitializeComponents()
@@ -124,22 +114,22 @@ void ATrueFPSWeaponBase::OnEquip(const ATrueFPSWeaponBase* LastWeapon)
 {
 	AttachMeshToPawn();
 
-	bPendingEquip = true;
+	State.bPendingEquip = true;
 	DetermineWeaponState();
 
 	// Only play animation if last weapon is valid
 	if (LastWeapon)
 	{
-		float Duration = PlayWeaponAnimation(EquipAnim);
+		float Duration = PlayWeaponAnimation(Settings->EquipAnim);
 		if (Duration <= 0.0f)
 		{
 			// failsafe
 			Duration = 0.5f;
 		}
-		EquipStartedTime = GetWorld()->GetTimeSeconds();
-		EquipDuration = Duration;
+		State.EquipStartedTime = GetWorld()->GetTimeSeconds();
+		State.EquipDuration = Duration;
 
-		GetWorldTimerManager().SetTimer(TimerHandle_OnEquipFinished, this, &ThisClass::OnEquipFinished, Duration, false);
+		GetWorldTimerManager().SetTimer(State.TimerHandle_OnEquipFinished, this, &ThisClass::OnEquipFinished, Duration, false);
 	}
 	else
 	{
@@ -148,7 +138,7 @@ void ATrueFPSWeaponBase::OnEquip(const ATrueFPSWeaponBase* LastWeapon)
 
 	if (MyPawn && MyPawn->IsLocallyControlled())
 	{
-		PlayWeaponSound(EquipSound);
+		PlayWeaponSound(Settings->EquipSound);
 	}
 }
 
@@ -156,8 +146,8 @@ void ATrueFPSWeaponBase::OnEquipFinished()
 {
 	AttachMeshToPawn();
 
-	bIsEquipped = true;
-	bPendingEquip = false;
+	State.bIsEquipped = true;
+	State.bPendingEquip = false;
 
 	// Determine the state so that the can reload checks will work
 	DetermineWeaponState(); 
@@ -166,15 +156,15 @@ void ATrueFPSWeaponBase::OnEquipFinished()
 void ATrueFPSWeaponBase::OnUnEquip()
 {
 	DetachMeshFromPawn();
-	bIsEquipped = false;
+	State.bIsEquipped = false;
 	StopFire();
 
-	if (bPendingEquip)
+	if (State.bPendingEquip)
 	{
-		StopWeaponAnimation(EquipAnim);
-		bPendingEquip = false;
+		StopWeaponAnimation(Settings->EquipAnim);
+		State.bPendingEquip = false;
 
-		GetWorldTimerManager().ClearTimer(TimerHandle_OnEquipFinished);
+		GetWorldTimerManager().ClearTimer(State.TimerHandle_OnEquipFinished);
 	}
 
 	DetermineWeaponState();
@@ -200,12 +190,12 @@ void ATrueFPSWeaponBase::OnLeaveInventory()
 
 bool ATrueFPSWeaponBase::IsEquipped() const
 {
-	return bIsEquipped;
+	return State.bIsEquipped;
 }
 
 bool ATrueFPSWeaponBase::IsAttachedToPawn() const
 {
-	return bIsEquipped || bPendingEquip;
+	return State.bIsEquipped || State.bPendingEquip;
 }
 
 void ATrueFPSWeaponBase::StartFire()
@@ -215,9 +205,9 @@ void ATrueFPSWeaponBase::StartFire()
 		ServerStartFire();
 	}
 
-	if (!bWantsToFire)
+	if (!State.bWantsToFire)
 	{
-		bWantsToFire = true;
+		State.bWantsToFire = true;
 		DetermineWeaponState();
 	}
 }
@@ -229,9 +219,9 @@ void ATrueFPSWeaponBase::StopFire()
 		ServerStopFire();
 	}
 
-	if (bWantsToFire)
+	if (State.bWantsToFire)
 	{
-		bWantsToFire = false;
+		State.bWantsToFire = false;
 		DetermineWeaponState();
 	}
 }
@@ -247,37 +237,31 @@ void ATrueFPSWeaponBase::ToggleSights()
 		TArray<ATrueFPSSightsAttachment*> AllSights;
 		GetAttachments(AllSights);
 
-		if (CurrentSights)
+		if (State.CurrentSights.IsValid())
 		{
-			const int32 CurrentIndex = AllSights.Find(CurrentSights);
-			CurrentSights = CurrentIndex != INDEX_NONE && AllSights.IsValidIndex(CurrentIndex + 1) ? AllSights[CurrentIndex + 1] : nullptr;
+			const int32 CurrentIndex = AllSights.Find(State.CurrentSights.Get());
+			State.CurrentSights = CurrentIndex != INDEX_NONE && AllSights.IsValidIndex(CurrentIndex + 1) ? AllSights[CurrentIndex + 1] : nullptr;
 		}
 		else if (AllSights.IsValidIndex(0))
 		{
-			CurrentSights = AllSights[0];
+			State.CurrentSights = AllSights[0];
 		}
 		
-		TargetSightsRelativeTransform = CurrentSights ? CurrentSights->GetSightsWorldTransform().GetRelativeTransform(GetActorTransform()) : GetDefaultSightsRelativeTransform();
+		TargetSightsRelativeTransform = State.CurrentSights.IsValid() ? State.CurrentSights->GetSightsWorldTransform().GetRelativeTransform(GetActorTransform()) : GetDefaultSightsRelativeTransform();
 	}
 }
 
 bool ATrueFPSWeaponBase::CanFire() const
 {
-	bool bCanFire = MyPawn && MyPawn->Implements<UTrueFPSCharacterInterface>() && ITrueFPSCharacterInterface::Execute_CanFire(MyPawn);
-	bool bStateOKToFire = ( ( CurrentState ==  EWeaponState::Idle ) || ( CurrentState == EWeaponState::Firing) );	
+	const bool bCanFire = MyPawn && MyPawn->Implements<UTrueFPSCharacterInterface>() && ITrueFPSCharacterInterface::Execute_TrueFPSInterface_CanFire(MyPawn);
+	const bool bStateOKToFire = ( ( State.CurrentState ==  EWeaponState::Idle ) || ( State.CurrentState == EWeaponState::Firing) );	
 	return (( bCanFire == true ) && ( bStateOKToFire == true ));
 }
 
 bool ATrueFPSWeaponBase::CanAim() const
 {
-	bool bIsCloseToWall = IsCloseToWall();
-	
+	const bool bIsCloseToWall = IsCloseToWall();
 	return (bIsCloseToWall == false);
-}
-
-EWeaponState::Type ATrueFPSWeaponBase::GetCurrentState() const
-{
-	return CurrentState;
 }
 
 USkeletalMeshComponent* ATrueFPSWeaponBase::GetWeaponMesh() const
@@ -290,7 +274,7 @@ bool ATrueFPSWeaponBase::IsFirstPerson() const
 {
 	if (!MyPawn) return false;
 	if (!MyPawn->Implements<UTrueFPSCharacterInterface>()) return false;
-	return ITrueFPSCharacterInterface::Execute_IsFirstPerson(MyPawn);
+	return MyPawn->IsLocallyControlled() && ITrueFPSCharacterInterface::Execute_TrueFPSInterface_IsAlive(MyPawn);
 }
 
 void ATrueFPSWeaponBase::SetOwningPawn(ACharacter* NewOwner)
@@ -306,12 +290,12 @@ void ATrueFPSWeaponBase::SetOwningPawn(ACharacter* NewOwner)
 
 float ATrueFPSWeaponBase::GetEquipStartedTime() const
 {
-	return EquipStartedTime;
+	return State.EquipStartedTime;
 }
 
 float ATrueFPSWeaponBase::GetEquipDuration() const
 {
-	return EquipDuration;
+	return State.EquipDuration;
 }
 
 void ATrueFPSWeaponBase::GetAttachments(TArray<ATrueFPSWeaponAttachmentBase*>& OutAttachments) const
@@ -395,69 +379,64 @@ void ATrueFPSWeaponBase::OnRep_BurstCounter()
 
 void ATrueFPSWeaponBase::SimulateWeaponFire()
 {
-	if (GetLocalRole() == ROLE_Authority && CurrentState != EWeaponState::Firing)
+	if (GetLocalRole() == ROLE_Authority && State.CurrentState != EWeaponState::Firing)
 	{
 		return;
 	}
 
-	if (!bLoopedFireAnim || !bPlayingFireAnim)
+	if (!Settings->bLoopedFireAnim || !State.bPlayingFireAnim)
 	{
-		PlayWeaponAnimation(FireAnim);
-		bPlayingFireAnim = true;
+		PlayWeaponAnimation(Settings->FireAnim);
+		State.bPlayingFireAnim = true;
 	}
 
-	if (bLoopedFireSound)
+	if (Settings->bLoopedFireSound)
 	{
-		if (FireAC == nullptr)
+		if (!State.FireAC.IsValid())
 		{
-			FireAC = PlayWeaponSound(FireLoopSound);
+			State.FireAC = PlayWeaponSound(Settings->FireLoopSound);
 		}
 	}
 	else
 	{
-		PlayWeaponSound(FireSound);
+		PlayWeaponSound(Settings->FireSound);
 	}
 
-	// Adding Recoil
-	AddRecoilInstance(WeaponAnimProperties.RecoilParams);
+	// Adding Recoil Animation
+	AddRecoilInstance(Settings->Recoil);
 
-	ATrueFPSPlayerController* PC = (MyPawn != nullptr) ? Cast<ATrueFPSPlayerController>(MyPawn->Controller) : nullptr;
-	if (PC != nullptr && PC->IsLocalController())
+	if (APlayerController* PC = (MyPawn != nullptr) ? Cast<APlayerController>(MyPawn->Controller) : nullptr; PC != nullptr && PC->IsLocalController())
 	{
-		if (RecoilCurve != nullptr && MyPawn && MyPawn->Implements<UTrueFPSCharacterInterface>())
-		{
-			const FVector2D RecoilAmount(RecoilCurve->GetVectorValue(FMath::RandRange(0.f, 1.f)).X, RecoilCurve->GetVectorValue(FMath::RandRange(0.f, 1.f)).Y);
-			ITrueFPSCharacterInterface::Execute_ApplyRecoil(MyPawn, RecoilAmount, RecoilSpeed, RecoilResetSpeed);
-		}
+		ApplyCameraRecoil();
 		
-		if (FireCameraShake != nullptr)
+		if (Settings->FireCameraShake != nullptr)
 		{
-			PC->ClientStartCameraShake(FireCameraShake, 1);
+			PC->ClientStartCameraShake(Settings->FireCameraShake, 1);
 		}
 
-		if (FireForceFeedback != nullptr/* && PC->IsVibrationEnabled()*/) // TODO: Setup Vibration Configurable
+		if (Settings->FireForceFeedback != nullptr/* && PC->IsVibrationEnabled()*/) // TODO: Setup Vibration Configurable
 		{
 			FForceFeedbackParameters FFParams;
 			FFParams.Tag = "Weapon";
-			PC->ClientPlayForceFeedback(FireForceFeedback, FFParams);
+			PC->ClientPlayForceFeedback(Settings->FireForceFeedback, FFParams);
 		}
 	}
 }
 
 void ATrueFPSWeaponBase::StopSimulatingWeaponFire()
 {
-	if (bLoopedFireAnim && bPlayingFireAnim)
+	if (Settings && Settings->bLoopedFireAnim && State.bPlayingFireAnim)
 	{
-		StopWeaponAnimation(FireAnim);
-		bPlayingFireAnim = false;
+		StopWeaponAnimation(Settings->FireAnim);
+		State.bPlayingFireAnim = false;
 	}
 
-	if (FireAC)
+	if (Settings && State.FireAC.IsValid())
 	{
-		FireAC->FadeOut(0.1f, 0.0f);
-		FireAC = nullptr;
+		State.FireAC->FadeOut(0.1f, 0.0f);
+		State.FireAC = nullptr;
 
-		PlayWeaponSound(FireFinishSound);
+		PlayWeaponSound(Settings->FireFinishSound);
 	}
 }
 
@@ -477,13 +456,13 @@ void ATrueFPSWeaponBase::ServerHandleFiring_Implementation()
 void ATrueFPSWeaponBase::HandleReFiring()
 {
 	// Update TimerIntervalAdjustment
-	UWorld* MyWorld = GetWorld();
+	const UWorld* MyWorld = GetWorld();
 
-	float SlackTimeThisFrame = FMath::Max(0.0f, (MyWorld->TimeSeconds - LastFireTime) - WeaponConfig.TimeBetweenShots);
+	const float SlackTimeThisFrame = FMath::Max(0.0f, (MyWorld->TimeSeconds - State.LastFireTime) - Settings->TimeBetweenShots);
 
-	if (bAllowAutomaticWeaponCatchup)
+	if (Settings->bAllowAutomaticWeaponCatchup)
 	{
-		TimerIntervalAdjustment -= SlackTimeThisFrame;
+		State.TimerIntervalAdjustment -= SlackTimeThisFrame;
 	}
 
 	HandleFiring();
@@ -527,26 +506,26 @@ void ATrueFPSWeaponBase::HandleFiring()
 			ServerHandleFiring();
 		}
 
-		// setup refire timer
-		bRefiring = (CurrentState == EWeaponState::Firing && WeaponConfig.TimeBetweenShots > 0.0f);
-		if (bRefiring)
+		// setup re-fire timer
+		State.bRefiring = (State.CurrentState == EWeaponState::Firing && Settings->TimeBetweenShots > 0.0f);
+		if (State.bRefiring)
 		{
-			GetWorldTimerManager().SetTimer(TimerHandle_HandleFiring, this, &ThisClass::HandleReFiring, FMath::Max<float>(WeaponConfig.TimeBetweenShots + TimerIntervalAdjustment, SMALL_NUMBER), false);
-			TimerIntervalAdjustment = 0.f;
+			GetWorldTimerManager().SetTimer(State.TimerHandle_HandleFiring, this, &ThisClass::HandleReFiring, FMath::Max<float>(Settings->TimeBetweenShots + State.TimerIntervalAdjustment, SMALL_NUMBER), false);
+			State.TimerIntervalAdjustment = 0.f;
 		}
 	}
 
-	LastFireTime = GetWorld()->GetTimeSeconds();
+	State.LastFireTime = GetWorld()->GetTimeSeconds();
 }
 
 void ATrueFPSWeaponBase::OnBurstStarted()
 {
 	// start firing, can be delayed to satisfy TimeBetweenShots
 	const float GameTime = GetWorld()->GetTimeSeconds();
-	if (LastFireTime > 0 && WeaponConfig.TimeBetweenShots > 0.0f &&
-		LastFireTime + WeaponConfig.TimeBetweenShots > GameTime)
+	if (State.LastFireTime > 0 && Settings->TimeBetweenShots > 0.0f &&
+		State.LastFireTime + Settings->TimeBetweenShots > GameTime)
 	{
-		GetWorldTimerManager().SetTimer(TimerHandle_HandleFiring, this, &ThisClass::HandleFiring, LastFireTime + WeaponConfig.TimeBetweenShots - GameTime, false);
+		GetWorldTimerManager().SetTimer(State.TimerHandle_HandleFiring, this, &ThisClass::HandleFiring, State.LastFireTime + Settings->TimeBetweenShots - GameTime, false);
 	}
 	else
 	{
@@ -565,23 +544,23 @@ void ATrueFPSWeaponBase::OnBurstFinished()
 	StopSimulatingWeaponFire();
 	//}
 	
-	GetWorldTimerManager().ClearTimer(TimerHandle_HandleFiring);
-	bRefiring = false;
+	GetWorldTimerManager().ClearTimer(State.TimerHandle_HandleFiring);
+	State.bRefiring = false;
 
 	// reset firing interval adjustment
-	TimerIntervalAdjustment = 0.0f;
+	State.TimerIntervalAdjustment = 0.0f;
 }
 
 void ATrueFPSWeaponBase::SetWeaponState(EWeaponState::Type NewState)
 {
-	const EWeaponState::Type PrevState = CurrentState;
+	const EWeaponState::Type PrevState = State.CurrentState;
 
 	if (PrevState == EWeaponState::Firing && NewState != EWeaponState::Firing)
 	{
 		OnBurstFinished();
 	}
 
-	CurrentState = NewState;
+	State.CurrentState = NewState;
 
 	if (PrevState != EWeaponState::Firing && NewState == EWeaponState::Firing)
 	{
@@ -593,14 +572,14 @@ void ATrueFPSWeaponBase::DetermineWeaponState()
 {
 	EWeaponState::Type NewState = EWeaponState::Idle;
 
-	if (bIsEquipped)
+	if (State.bIsEquipped)
 	{
-		if ( ( bWantsToFire == true ) && ( CanFire() == true ))
+		if ( ( State.bWantsToFire == true ) && ( CanFire() == true ))
 		{
 			NewState = EWeaponState::Firing;
 		}
 	}
-	else if (bPendingEquip)
+	else if (State.bPendingEquip)
 	{
 		NewState = EWeaponState::Equipping;
 	}
@@ -608,31 +587,105 @@ void ATrueFPSWeaponBase::DetermineWeaponState()
 	SetWeaponState(NewState);
 }
 
-void ATrueFPSWeaponBase::HandleRecoil(float DeltaSeconds)
+void ATrueFPSWeaponBase::HandleRecoil(const float DeltaSeconds)
 {
-	for (int32 i = 0; i < RecoilInstances.Num(); i++)
-	{
-		FRecoilInstance& RecoilInstance = RecoilInstances[i];
+	FRecoilInstance& RecoilInstance = State.CurrentRecoilInstance;
 		
-		const float CurrentTime = RecoilInstance.CurrentTime += DeltaSeconds * RecoilInstance.PlayRate;
+	const float CurrentTime = RecoilInstance.CurrentTime += DeltaSeconds * RecoilInstance.PlayRate;
 
-		const FVector CurveRotationVector = RecoilInstance.RotationCurve->GetVectorValue(CurrentTime);
-		FRotator CurveRotation(CurveRotationVector.Y, CurveRotationVector.Z, CurveRotationVector.X);
-		FVector CurveLocation(RecoilInstance.LocationCurve->GetVectorValue(CurrentTime));
-		const FTransform CurrentValue(CurveRotation, CurveLocation);
-
-		RecoilOffset = CurrentValue;
-
-		if (CurrentTime >= RecoilInstance.Lifetime)
-		{ // If we have surpassed the duration of the recoil curve...
-			RecoilInstances.RemoveAt(i--);
-	
-			if (RecoilInstances.IsEmpty())
-			{
-				RecoilOffset = FTransform::Identity;
-			}
-		}
+	if (CurrentTime >= RecoilInstance.Lifetime)
+	{
+		State.RecoilOffset = FTransform::Identity;
+		return;
 	}
+
+	const FVector CurveRotationVector = RecoilInstance.RotationCurve->GetVectorValue(CurrentTime);
+	const FRotator CurveRotation(CurveRotationVector.Y, CurveRotationVector.Z, CurveRotationVector.X);
+	const FVector CurveLocation(RecoilInstance.LocationCurve->GetVectorValue(CurrentTime));
+	const FTransform CurrentValue(CurveRotation, CurveLocation);
+
+	State.RecoilOffset = CurrentValue;
+}
+
+void ATrueFPSWeaponBase::ApplyCameraRecoil()
+{
+	if (!MyPawn) return;
+	const APlayerController* PC = MyPawn->GetController<APlayerController>();
+	if (!PC) return;
+	
+	if (IsValid(Settings->CameraRecoilCurve))
+	{
+		State.bResetCameraRecoil = false;
+		State.CameraRecoilCurrentTime += Settings->CameraRecoilProgressRate;
+
+		const FVector RecoilVec = Settings->CameraRecoilCurve->GetVectorValue(State.CameraRecoilCurrentTime) * Settings->CameraRecoilMultiplier;
+
+		State.TargetCameraRecoilAmount += FVector2D(RecoilVec.X, RecoilVec.Y);
+		State.bShouldUpdateCameraRecoil = true;
+
+		GetWorldTimerManager().ClearTimer(State.TimerHandle_CameraRecoilRecovery);
+		GetWorldTimerManager().SetTimer(State.TimerHandle_CameraRecoilRecovery, this, &ThisClass::ResetCameraRecoil, Settings->CameraRecoilRecoveryTime);
+	}
+}
+
+void ATrueFPSWeaponBase::ResetCameraRecoil()
+{
+	State.bResetCameraRecoil = true;
+	State.CameraRecoilCurrentTime = 0.f;
+	State.bShouldUpdateCameraRecoil = true;
+}
+
+void ATrueFPSWeaponBase::RefreshCameraRecoil(float DeltaTime)
+{
+	if (!MyPawn) return;
+	if (!MyPawn->Implements<UTrueFPSCharacterInterface>()) return;
+	APlayerController* PC = MyPawn->GetController<APlayerController>();
+	if (!PC) return;
+
+	if (!State.bShouldUpdateCameraRecoil) return;
+
+	const FRotator ControllerInput = ITrueFPSCharacterInterface::Execute_TrueFPSInterface_GetLastUpdatedRotationValues(MyPawn);
+
+	const FVector2D RecoverySubtract = FVector2D(
+		ClampCameraRecoilRecovery(ControllerInput.Yaw, State.TargetCameraRecoilRecoveryAmount.X),
+		ClampCameraRecoilRecovery(ControllerInput.Pitch, State.TargetCameraRecoilRecoveryAmount.Y));
+
+	State.TargetCameraRecoilRecoveryAmount -= RecoverySubtract;
+
+	if (State.bResetCameraRecoil)
+	{
+		const FVector2D TargetRecoveryInterp = UKismetMathLibrary::Vector2DInterpTo(State.TargetCameraRecoilRecoveryAmount, FVector2D::ZeroVector, DeltaTime, 4.f);
+		const FVector2D TargetRecovery = State.TargetCameraRecoilRecoveryAmount - TargetRecoveryInterp;
+		
+		AddCameraRecoilControlRotation(TargetRecovery);
+
+		State.TargetCameraRecoilRecoveryAmount = TargetRecoveryInterp;
+		if (TargetRecoveryInterp.IsZero()) State.bShouldUpdateCameraRecoil = false;
+	}
+	else
+	{
+		const FVector2D TargetRecoilInterp = UKismetMathLibrary::Vector2DInterpTo(State.TargetCameraRecoilAmount, FVector2D::ZeroVector, DeltaTime, Settings->CameraRecoilRecoverySpeed);
+		const FVector2D TargetRecoil = State.TargetCameraRecoilAmount - TargetRecoilInterp;
+
+		AddCameraRecoilControlRotation(TargetRecoil);
+
+		State.TargetCameraRecoilRecoveryAmount = State.TargetCameraRecoilRecoveryAmount + FVector2D(-TargetRecoil.X, -TargetRecoil.Y);
+		State.TargetCameraRecoilAmount = TargetRecoilInterp;
+
+		if (TargetRecoilInterp.IsZero()) State.bShouldUpdateCameraRecoil = false;
+	}
+}
+
+float ATrueFPSWeaponBase::ClampCameraRecoilRecovery(const float Value, const float Clamp) const
+{
+	if (Clamp > 0.f) return FMath::Clamp(Value, 0.f, Clamp);
+	return FMath::Clamp(Value, Clamp, 0.f);
+}
+
+void ATrueFPSWeaponBase::AddCameraRecoilControlRotation(const FVector2D& Amount) const
+{
+	MyPawn->AddControllerYawInput(Amount.X);
+	MyPawn->AddControllerPitchInput(Amount.Y);
 }
 
 void ATrueFPSWeaponBase::AttachMeshToPawn()
@@ -642,24 +695,24 @@ void ATrueFPSWeaponBase::AttachMeshToPawn()
 		// Remove and hide both first and third person meshes
 		DetachMeshFromPawn();
 
-		FName AttachPoint = MyPawn->Implements<UTrueFPSCharacterInterface>() ? ITrueFPSCharacterInterface::Execute_GetWeaponAttachPoint(MyPawn) : FName("hand_r");
+		const FName AttachPoint = Settings->AttachPoint;
 		if(MyPawn->IsLocallyControlled() == true)
 		{
-			USkeletalMeshComponent* PawnMesh1p = MyPawn->Implements<UTrueFPSCharacterInterface>() ? ITrueFPSCharacterInterface::Execute_GetSpecificPawnMesh(MyPawn, true) : MyPawn->GetMesh();
-			USkeletalMeshComponent* PawnMesh3p = MyPawn->Implements<UTrueFPSCharacterInterface>() ? ITrueFPSCharacterInterface::Execute_GetSpecificPawnMesh(MyPawn, false) : MyPawn->GetMesh();
+			USkeletalMeshComponent* PawnMesh1p = MyPawn->Implements<UTrueFPSCharacterInterface>() ? ITrueFPSCharacterInterface::Execute_TrueFPSInterface_GetSpecificPawnMesh(MyPawn, true) : MyPawn->GetMesh();
+			USkeletalMeshComponent* PawnMesh3p = MyPawn->Implements<UTrueFPSCharacterInterface>() ? ITrueFPSCharacterInterface::Execute_TrueFPSInterface_GetSpecificPawnMesh(MyPawn, false) : MyPawn->GetMesh();
 			Mesh1P->SetHiddenInGame(false);
 			Mesh3P->SetHiddenInGame(true);
 			Mesh1P->AttachToComponent(PawnMesh1p, FAttachmentTransformRules::KeepRelativeTransform, AttachPoint);
 			Mesh3P->AttachToComponent(PawnMesh3p, FAttachmentTransformRules::KeepRelativeTransform, AttachPoint);
-			Mesh1P->SetRelativeTransform(WeaponAnimProperties.PlacementTransform);
-			Mesh3P->SetRelativeTransform(WeaponAnimProperties.PlacementTransform);
+			Mesh1P->SetRelativeTransform(Settings->PlacementTransform);
+			Mesh3P->SetRelativeTransform(Settings->PlacementTransform);
 		}
 		else
 		{
 			USkeletalMeshComponent* UseWeaponMesh = GetWeaponMesh();
 			USkeletalMeshComponent* UsePawnMesh = MyPawn->GetMesh();
 			UseWeaponMesh->AttachToComponent(UsePawnMesh, FAttachmentTransformRules::KeepRelativeTransform, AttachPoint);
-			UseWeaponMesh->SetRelativeTransform(WeaponAnimProperties.PlacementTransform);
+			UseWeaponMesh->SetRelativeTransform(Settings->PlacementTransform);
 			UseWeaponMesh->SetHiddenInGame( false );
 		}
 
@@ -671,7 +724,7 @@ void ATrueFPSWeaponBase::AttachMeshToPawn()
 	}
 }
 
-void ATrueFPSWeaponBase::DetachMeshFromPawn()
+void ATrueFPSWeaponBase::DetachMeshFromPawn() const
 {
 	Mesh1P->DetachFromComponent(FDetachmentTransformRules::KeepRelativeTransform);
 	Mesh1P->SetHiddenInGame(true);
@@ -691,27 +744,25 @@ UAudioComponent* ATrueFPSWeaponBase::PlayWeaponSound(USoundBase* Sound)
 	UAudioComponent* AC = nullptr;
 	if (Sound && MyPawn)
 	{
-		AC = UGameplayStatics::SpawnSoundAttached(Sound, MyPawn->GetRootComponent(), SoundsAttachPoint);
+		AC = UGameplayStatics::SpawnSoundAttached(Sound, MyPawn->GetRootComponent(), Settings->SoundsAttachPoint);
 	}
 
 	return AC;
 }
 
-float ATrueFPSWeaponBase::PlayWeaponAnimation(const FWeaponAnim& Animation)
+float ATrueFPSWeaponBase::PlayWeaponAnimation(const FWeaponAnim& Animation) const
 {
 	float Duration = 0.0f;
 	if (MyPawn)
 	{
 		const bool bIsFirstPerson = IsFirstPerson();
-		
-		UAnimMontage* PawnAnim = bIsFirstPerson ? Animation.Pawn1P : Animation.Pawn3P;
-		if (PawnAnim)
+
+		if (UAnimMontage* PawnAnim = bIsFirstPerson ? Animation.Pawn1P : Animation.Pawn3P)
 		{
 			Duration = MyPawn->PlayAnimMontage(PawnAnim);
 		}
 
-		UAnimMontage* WeaponAnim = bIsFirstPerson ? Animation.Weapon1P : Animation.Weapon3P;
-		if (WeaponAnim)
+		if (UAnimMontage* WeaponAnim = bIsFirstPerson ? Animation.Weapon1P : Animation.Weapon3P)
 		{
 			GetWeaponMesh()->PlayAnimation(WeaponAnim, false);
 		}
@@ -720,14 +771,13 @@ float ATrueFPSWeaponBase::PlayWeaponAnimation(const FWeaponAnim& Animation)
 	return Duration;
 }
 
-void ATrueFPSWeaponBase::StopWeaponAnimation(const FWeaponAnim& Animation)
+void ATrueFPSWeaponBase::StopWeaponAnimation(const FWeaponAnim& Animation) const
 {
 	if (MyPawn)
 	{
 		const bool bIsFirstPerson = IsFirstPerson();
-		
-		UAnimMontage* UseAnim = bIsFirstPerson ? Animation.Pawn1P : Animation.Pawn3P;
-		if (UseAnim)
+
+		if (UAnimMontage* UseAnim = bIsFirstPerson ? Animation.Pawn1P : Animation.Pawn3P)
 		{
 			MyPawn->StopAnimMontage(UseAnim);
 		}
@@ -736,7 +786,7 @@ void ATrueFPSWeaponBase::StopWeaponAnimation(const FWeaponAnim& Animation)
 
 FVector ATrueFPSWeaponBase::GetAdjustedAim() const
 {
-	ATrueFPSPlayerController* const PlayerController = GetInstigatorController<ATrueFPSPlayerController>();
+	const APlayerController* const PlayerController = GetInstigatorController<APlayerController>();
 	FVector FinalAim = FVector::ZeroVector;
 	// If we have a player controller use it for the aim
 	if (PlayerController)
@@ -749,8 +799,7 @@ FVector ATrueFPSWeaponBase::GetAdjustedAim() const
 	else if (GetInstigator())
 	{
 		// Now see if we have an AI controller - we will want to get the aim from there if we do
-		ATrueFPSAIController* AIController = MyPawn ? Cast<ATrueFPSAIController>(MyPawn->Controller) : NULL;
-		if(AIController != NULL )
+		if(const ATrueFPSAIController* AIController = MyPawn ? Cast<ATrueFPSAIController>(MyPawn->Controller) : nullptr; AIController != nullptr )
 		{
 			FinalAim = AIController->GetControlRotation().Vector();
 		}
@@ -765,7 +814,7 @@ FVector ATrueFPSWeaponBase::GetAdjustedAim() const
 
 FVector ATrueFPSWeaponBase::GetCameraAim() const
 {
-	ATrueFPSPlayerController* const PlayerController = GetInstigatorController<ATrueFPSPlayerController>();
+	const APlayerController* const PlayerController = GetInstigatorController<APlayerController>();
 	FVector FinalAim = FVector::ZeroVector;
 
 	if (PlayerController)
@@ -785,7 +834,7 @@ FVector ATrueFPSWeaponBase::GetCameraAim() const
 
 FVector ATrueFPSWeaponBase::GetCameraDamageStartLocation(const FVector& AimDir) const
 {
-	APlayerController* PC = MyPawn ? Cast<APlayerController>(MyPawn->Controller) : nullptr;
+	const APlayerController* PC = MyPawn ? Cast<APlayerController>(MyPawn->Controller) : nullptr;
 	FVector OutStartTrace = FVector::ZeroVector;
 
 	if (PC)
@@ -803,25 +852,25 @@ FVector ATrueFPSWeaponBase::GetCameraDamageStartLocation(const FVector& AimDir) 
 
 FTransform ATrueFPSWeaponBase::GetOffsetTransform() const
 {
-	const FTransform DefaultOffsetTransform = RecoilOffset * OffsetTransform;
+	const FTransform DefaultOffsetTransform = State.RecoilOffset * State.OffsetTransform;
 	
-	return UKismetMathLibrary::TLerp(DefaultOffsetTransform, DefaultOffsetTransform * WeaponAnimProperties.WallOffsetTransform, GetWallOffsetTransformAlpha());
+	return UKismetMathLibrary::TLerp(DefaultOffsetTransform, DefaultOffsetTransform * Settings->WallOffsetTransform, GetWallOffsetTransformAlpha());
 }
 
 FTransform ATrueFPSWeaponBase::GetDefaultSightsRelativeTransform() const
 {
-	return FTransform(FVector(-WeaponAnimProperties.AimOffset, 0.f, 0.f)) * GetWeaponMesh()->GetSocketTransform(WeaponAnimProperties.SightSocketName, RTS_Actor);
+	return FTransform(FVector(-Settings->AimOffset, 0.f, 0.f)) * GetWeaponMesh()->GetSocketTransform(Settings->SightSocketName, RTS_Actor);
 }
 
 FTransform ATrueFPSWeaponBase::GetSightsWorldTransform() const
 {
-	return SightsRelativeTransform * GetActorTransform();
+	return State.SightsRelativeTransform * GetActorTransform();
 }
 
 FTransform ATrueFPSWeaponBase::GetOriginRelativeTransform() const
 {
-	const FQuat Rot(WeaponAnimProperties.OriginRelativeTransform.GetRotation());
-	return FTransform(Rot, Rot.RotateVector(WeaponAnimProperties.OriginRelativeTransform.GetLocation()), WeaponAnimProperties.OriginRelativeTransform.GetScale3D());
+	const FQuat Rot(Settings->OriginRelativeTransform.GetRotation());
+	return FTransform(Rot, Rot.RotateVector(Settings->OriginRelativeTransform.GetLocation()), Settings->OriginRelativeTransform.GetScale3D());
 }
 
 FTransform ATrueFPSWeaponBase::GetOriginWorldTransform() const
@@ -837,11 +886,11 @@ FTransform ATrueFPSWeaponBase::GetOrientationRelativeTransform(const float Aimin
 	// Y location being equal to the sights origin-space Y location.
 	FTransform OriginCenteredTransform = GetOriginRelativeTransform();
 	OriginCenteredTransform.SetLocation(OriginCenteredTransform.GetLocation() +
-		OriginCenteredTransform.GetRotation().RotateVector(FVector(0.f, WeaponAnimProperties.OriginRelativeTransform.GetRotation().UnrotateVector(SightsRelativeTransform.GetLocation()).Y, 0.f)));
+		OriginCenteredTransform.GetRotation().RotateVector(FVector(0.f, Settings->OriginRelativeTransform.GetRotation().UnrotateVector(State.SightsRelativeTransform.GetLocation()).Y, 0.f)));
 
 	// Get the centered origin position rotated about the sights transform
-	const FTransform SightsOrigin(SightsRelativeTransform.GetRotation(),
-		(OriginCenteredTransform.GetRelativeTransform(SightsRelativeTransform) * SightsRelativeTransform.GetRotation() * WeaponAnimProperties.OriginRelativeTransform.GetRotation().Inverse() * SightsRelativeTransform).GetLocation());
+	const FTransform SightsOrigin(State.SightsRelativeTransform.GetRotation(),
+		(OriginCenteredTransform.GetRelativeTransform(State.SightsRelativeTransform) * State.SightsRelativeTransform.GetRotation() * Settings->OriginRelativeTransform.GetRotation().Inverse() * State.SightsRelativeTransform).GetLocation());
 
 	// Blend between the standard origin transform and the
 	// sights origin by the aiming value.
@@ -863,14 +912,14 @@ float ATrueFPSWeaponBase::CalculateWallOffsetTransformAlpha() const
 	FCollisionQueryParams TraceParams(SCENE_QUERY_STAT(GetWallOffsetTransformAlpha), false, this);
 	TraceParams.AddIgnoredActor(GetInstigator());
 	
-	const FVector StartTrace = ITrueFPSCharacterInterface::Execute_GetFirstPersonCameraTarget(GetPawnOwner());
-	const FVector EndTrace = StartTrace + GetPawnOwner()->GetBaseAimRotation().Vector() * WeaponAnimProperties.WallOffsetTransformMaxDistance;
+	const FVector StartTrace = ITrueFPSCharacterInterface::Execute_TrueFPSInterface_GetFirstPersonCameraTarget(GetPawnOwner());
+	const FVector EndTrace = StartTrace + GetPawnOwner()->GetBaseAimRotation().Vector() * Settings->WallOffsetTransformMaxDistance;
 
 	FHitResult Hit(ForceInit);
 	if (GetWorld()->LineTraceSingleByChannel(Hit, StartTrace, EndTrace, ECC_Visibility, TraceParams))
 	{
-		const float WallMinDist = WeaponAnimProperties.WallOffsetTransformMinDistance;
-		const float WallMaxDist = WeaponAnimProperties.WallOffsetTransformMaxDistance;
+		const float WallMinDist = Settings->WallOffsetTransformMinDistance;
+		const float WallMaxDist = Settings->WallOffsetTransformMaxDistance;
 	
 		return 1.f - FMath::Clamp((Hit.Distance - WallMinDist) / (WallMaxDist - WallMinDist), 0.f, 1.f);
 	}
@@ -882,6 +931,8 @@ float ATrueFPSWeaponBase::CalculateWallOffsetTransformAlpha() const
 void ATrueFPSWeaponBase::RegisterAllComponents()
 {
 	Super::RegisterAllComponents();
+
+	if (!IsValid(Settings)) return;
 	
 	if(!OriginWidgetComp)
 	{
@@ -902,10 +953,10 @@ void ATrueFPSWeaponBase::RegisterAllComponents()
 				OriginWidgetComp->SetComponentTickEnabled(false);
 				OriginWidgetComp->SetHiddenInGame(true);
 				OriginWidgetComp->SetRelativeTransform(FTransform(
-					WeaponAnimProperties.OriginRelativeTransform.GetRotation(),
-					WeaponAnimProperties.OriginRelativeTransform.GetRotation().RotateVector(
-						WeaponAnimProperties.OriginRelativeTransform.GetLocation()),
-					WeaponAnimProperties.OriginRelativeTransform.GetScale3D()));
+					Settings->OriginRelativeTransform.GetRotation(),
+					Settings->OriginRelativeTransform.GetRotation().RotateVector(
+					Settings->OriginRelativeTransform.GetLocation()),
+					Settings->OriginRelativeTransform.GetScale3D()));
 				OriginWidgetComp->RegisterComponentWithWorld(GetWorld());
 			}
 		}

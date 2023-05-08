@@ -108,13 +108,6 @@ void ATrueFPSGameMode::RestartPlayer(AController* NewPlayer)
 	ATrueFPSPlayerController* PC = Cast<ATrueFPSPlayerController>(NewPlayer);
 	if (PC)
 	{
-		// Since initial weapon is equipped before the pawn is added to the replication graph, need to resend the notify so that it can be added as a dependent actor
-		ATrueFPSCharacter* Character = Cast<ATrueFPSCharacter>(PC->GetCharacter());
-		if (Character)
-		{
-			ATrueFPSCharacter::NotifyEquipWeapon.Broadcast(Character, Character->GetWeapon());
-		}
-		
 		ATrueFPSHUD* TrueFPSHUD = Cast<ATrueFPSHUD>(PC->GetHUD());
 		if (TrueFPSHUD)
 		{

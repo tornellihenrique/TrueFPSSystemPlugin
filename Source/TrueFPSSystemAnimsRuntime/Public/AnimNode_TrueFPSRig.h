@@ -58,6 +58,9 @@ struct TRUEFPSSYSTEMANIMSRUNTIME_API FAnimNode_TrueFPSRig : public FAnimNode_Bas
 	// The aim rotation. The Zero-Rotator being forward
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (PinShownByDefault, DisplayName = "Aim Rotation"), Category = "Configurations")
 	FRotator CameraRelativeRotation = FRotator::ZeroRotator;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (PinHiddenByDefault, DisplayName = "Aiming Head Rotation Offset"), Category = "Configurations")
+	FRotator AimingHeadRotationOffset = FRotator::ZeroRotator;
 
 	//
 	//	Arms IK

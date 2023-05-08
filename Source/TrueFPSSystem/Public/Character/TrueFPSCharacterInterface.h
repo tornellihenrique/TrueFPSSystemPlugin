@@ -25,57 +25,51 @@ class TRUEFPSSYSTEM_API ITrueFPSCharacterInterface
 public:
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character")
-	bool IsFirstPerson();
+	bool TrueFPSInterface_IsAlive() const;
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character")
-	class USkeletalMeshComponent* GetSpecificPawnMesh(bool WantFirstPerson) const;
+	class USkeletalMeshComponent* TrueFPSInterface_GetSpecificPawnMesh(bool WantFirstPerson) const;
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Animations")
-	FRotator GetLastUpdatedRotationValues();
+	FRotator TrueFPSInterface_GetLastUpdatedRotationValues() const;
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Animations")
-	FTransform GetDomHandTransform();
+	FTransform TrueFPSInterface_GetDomHandTransform() const;
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Animations")
-	bool IsRunning();
+	bool TrueFPSInterface_IsRunning() const;
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Animations")
-	float GetCrouchValue() const;
+	float TrueFPSInterface_GetCrouchValue() const;
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Animations")
-	FVector GetFirstPersonCameraTarget() const;
+	float TrueFPSInterface_GetLeanValue() const;
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Animations")
-	FRotator GetFirstPersonCameraTargetRotation() const;
+	FVector TrueFPSInterface_GetFirstPersonCameraTarget() const;
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Animations")
+	FRotator TrueFPSInterface_GetFirstPersonCameraTargetRotation() const;
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Animations")
+	float TrueFPSInterface_GetAimingInterpSpeed() const;
 
 	//////////////////////////////////////////////////////////////////////////
 	// Weapons
 
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Animations|Weapons")
-	float GetADSValue();
-
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Animations|Weapons")
-	float GetLeanValue();
-
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Animations|Weapons")
-	FName GetWeaponAttachPoint();
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Weapons")
+	bool TrueFPSInterface_HasCurrentWeapon() const;
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Weapons")
-	bool HasCurrentWeapon();
+	class ATrueFPSWeaponBase* TrueFPSInterface_GetCurrentWeapon() const;
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Weapons")
-	class ATrueFPSWeaponBase* GetCurrentWeapon();
+	bool TrueFPSInterface_IsAiming() const;
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Weapons")
-	bool IsAiming() const;
+	bool TrueFPSInterface_CanFire() const;
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Weapons")
-	bool CanFire();
-
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Weapons")
-	bool CanReload();
-
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="TrueFPS Character|Weapons")
-	void ApplyRecoil(const FVector2D& RecoilAmount, const float RecoilSpeed, const float RecoilResetSpeed);
+	bool TrueFPSInterface_CanReload() const;
 	
 };

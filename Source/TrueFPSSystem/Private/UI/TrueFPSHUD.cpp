@@ -159,10 +159,10 @@ void ATrueFPSHUD::DrawHUD()
 	ScaleUI = FMath::Max(ScaleUI, MinHudScale);
 	
 	ATrueFPSCharacter* MyPawn = Cast<ATrueFPSCharacter>(GetOwningPawn());
-	if (MyPawn && MyPawn->IsAlive() && MyPawn->Health < MyPawn->GetMaxHealth() * MyPawn->GetLowHealthPercentage())
+	if (MyPawn && MyPawn->IsAlive() && MyPawn->GetHealth() < MyPawn->GetMaxHealth() * MyPawn->GetLowHealthPercentage())
 	{
-		const float AnimSpeedModifier = 1.0f + 5.0f * (1.0f - MyPawn->Health/(MyPawn->GetMaxHealth() * MyPawn->GetLowHealthPercentage()));
-		int32 EffectValue = 32 + 72 * (1.0f - MyPawn->Health/(MyPawn->GetMaxHealth() * MyPawn->GetLowHealthPercentage()));
+		const float AnimSpeedModifier = 1.0f + 5.0f * (1.0f - MyPawn->GetHealth()/(MyPawn->GetMaxHealth() * MyPawn->GetLowHealthPercentage()));
+		int32 EffectValue = 32 + 72 * (1.0f - MyPawn->GetHealth()/(MyPawn->GetMaxHealth() * MyPawn->GetLowHealthPercentage()));
 		PulseValue += GetWorld()->GetDeltaSeconds() * AnimSpeedModifier;
 		float EffectAlpha = FMath::Abs(FMath::Sin(PulseValue));
 
@@ -307,7 +307,7 @@ void ATrueFPSHUD::NotifyWeaponHit(float DamageTaken, FDamageEvent const& DamageE
 		}
 		if (DirIndex > -1)
 		{
-			const float DamageTakenPercentage = (DamageTaken / MyPawn->Health);
+			const float DamageTakenPercentage = (DamageTaken / MyPawn->GetHealth());
 			HitNotifyData[DirIndex].HitPercentage += DamageTakenPercentage * 2;
 			HitNotifyData[DirIndex].HitPercentage = FMath::Clamp(HitNotifyData[DirIndex].HitPercentage, 0.0f, 1.0f);
 			HitNotifyData[DirIndex].HitTime = CurrentTime;
@@ -548,19 +548,19 @@ void ATrueFPSHUD::DrawWeaponHUD()
 			const float PriWeapBgPosY =  Canvas->ClipY - Canvas->OrgY - (PriWeapOffsetY + PrimaryWeapBg.VL + Offset) * ScaleUI;
 
 			//Weapon draw position
-			const float PriWeapPosX = Canvas->ClipX - Canvas->OrgX - ((PriWeaponBoxWidth + MyWeapon->PrimaryIcon.UL) / 2.0f + 2 * Offset) * ScaleUI;
-			const float PriWeapPosY =  Canvas->ClipY - Canvas->OrgY - (PriWeapOffsetY + (PrimaryWeapBg.VL + MyWeapon->PrimaryIcon.VL) / 2 + Offset) * ScaleUI;
+			const float PriWeapPosX = Canvas->ClipX - Canvas->OrgX - ((PriWeaponBoxWidth + MyWeapon->GetSettings()->PrimaryIcon.UL) / 2.0f + 2 * Offset) * ScaleUI;
+			const float PriWeapPosY =  Canvas->ClipY - Canvas->OrgY - (PriWeapOffsetY + (PrimaryWeapBg.VL + MyWeapon->GetSettings()->PrimaryIcon.VL) / 2 + Offset) * ScaleUI;
 
 			//Drawing primary weapon icon, ammo in the clip and total spare ammo numbers
-			Canvas->DrawIcon(MyWeapon->PrimaryIcon, PriWeapPosX, PriWeapPosY, ScaleUI);
+			Canvas->DrawIcon(MyWeapon->GetSettings()->PrimaryIcon, PriWeapPosX, PriWeapPosY, ScaleUI);
 
 			//Clip draw position
 			if (MyFireWeapon)
 			{
-				const float ClipWidth = MyFireWeapon->PrimaryClipIcon.UL +  MyFireWeapon->PrimaryClipIconOffset * (MyFireWeapon->AmmoIconsCount-1);
+				const float ClipWidth = MyFireWeapon->GetFireSettings()->PrimaryClipIcon.UL +  MyFireWeapon->GetFireSettings()->PrimaryClipIconOffset * (MyFireWeapon->GetFireSettings()->AmmoIconsCount-1);
 				const float BoxWidth = 65.0f;
 				const float PriClipPosX = PriWeapPosX - (BoxWidth + ClipWidth) * ScaleUI;
-				const float PriClipPosY =  Canvas->ClipY - Canvas->OrgY - (PriWeapOffsetY + (PrimaryWeapBg.VL + MyFireWeapon->PrimaryClipIcon.VL) / 2 + Offset) * ScaleUI;
+				const float PriClipPosY =  Canvas->ClipY - Canvas->OrgY - (PriWeapOffsetY + (PrimaryWeapBg.VL + MyFireWeapon->GetFireSettings()->PrimaryClipIcon.VL) / 2 + Offset) * ScaleUI;
 
 				const float LeftCornerWidth = 60;
 
@@ -605,8 +605,8 @@ void ATrueFPSHUD::DrawWeaponHUD()
 				// Drawing clip icons
 				Canvas->SetDrawColor(FColor::White);
 
-				const float AmmoPerIcon = MyFireWeapon->GetAmmoPerClip() / MyFireWeapon->AmmoIconsCount;
-				for (int32 i = 0; i < MyFireWeapon->AmmoIconsCount; i++)
+				const float AmmoPerIcon = MyFireWeapon->GetAmmoPerClip() / MyFireWeapon->GetFireSettings()->AmmoIconsCount;
+				for (int32 i = 0; i < MyFireWeapon->GetFireSettings()->AmmoIconsCount; i++)
 				{
 					if ((i+1) * AmmoPerIcon > MyFireWeapon->GetCurrentAmmoInClip())
 					{
@@ -620,8 +620,8 @@ void ATrueFPSHUD::DrawWeaponHUD()
 						Canvas->SetDrawColor(Color, Color, Color, Color);
 					}
 
-					const float ClipOffset = MyFireWeapon->PrimaryClipIconOffset * ScaleUI * i;
-					Canvas->DrawIcon(MyFireWeapon->PrimaryClipIcon, PriClipPosX + ClipOffset, PriClipPosY, ScaleUI);
+					const float ClipOffset = MyFireWeapon->GetFireSettings()->PrimaryClipIconOffset * ScaleUI * i;
+					Canvas->DrawIcon(MyFireWeapon->GetFireSettings()->PrimaryClipIcon, PriClipPosX + ClipOffset, PriClipPosY, ScaleUI);
 				}
 			}
 			
@@ -653,20 +653,20 @@ void ATrueFPSHUD::DrawWeaponHUD()
 			const float SecWeapBgPosY =  Canvas->ClipY - Canvas->OrgY - (SecondaryWeapBg.VL + Offset) * ScaleUI;
 
 			//weapon draw position
-			const float SecWeapPosX = Canvas->ClipX - Canvas->OrgX - ((SecWeaponBoxWidth + SecondaryWeapon->SecondaryIcon.UL) / 2.0f + 2 * Offset) * ScaleUI;
-			const float SecWeapPosY =  Canvas->ClipY - Canvas->OrgY - (SecWeapOffsetY + (SecondaryWeapBg.VL + SecondaryWeapon->SecondaryIcon.VL) / 2.0f + Offset) * ScaleUI;
+			const float SecWeapPosX = Canvas->ClipX - Canvas->OrgX - ((SecWeaponBoxWidth + SecondaryWeapon->GetSettings()->SecondaryIcon.UL) / 2.0f + 2 * Offset) * ScaleUI;
+			const float SecWeapPosY =  Canvas->ClipY - Canvas->OrgY - (SecWeapOffsetY + (SecondaryWeapBg.VL + SecondaryWeapon->GetSettings()->SecondaryIcon.VL) / 2.0f + Offset) * ScaleUI;
 			
 			//Drawing secondary weapon icon, ammo in the clip and total ammo numbers
 			Canvas->SetDrawColor(FColor::White);
-			Canvas->DrawIcon(SecondaryWeapon->SecondaryIcon, SecWeapPosX, SecWeapPosY, ScaleUI);
+			Canvas->DrawIcon(SecondaryWeapon->GetSettings()->SecondaryIcon, SecWeapPosX, SecWeapPosY, ScaleUI);
 
 			if (SecondaryFireWeapon)
 			{
 				//secondary clip draw position
-				const float SecClipWidth = SecondaryFireWeapon->SecondaryClipIcon.UL +  SecondaryFireWeapon->SecondaryClipIconOffset * (SecondaryFireWeapon->AmmoIconsCount-1);
+				const float SecClipWidth = SecondaryFireWeapon->GetFireSettings()->SecondaryClipIcon.UL +  SecondaryFireWeapon->GetFireSettings()->SecondaryClipIconOffset * (SecondaryFireWeapon->GetFireSettings()->AmmoIconsCount-1);
 				const float SecClipBoxWidth = 45.0f;
 				const float SecClipPosX = Canvas->ClipX - Canvas->OrgX - (SecWeaponBoxWidth + SecClipBoxWidth + SecClipWidth + 2 * Offset) * ScaleUI;
-				const float SecClipPosY =  Canvas->ClipY - Canvas->OrgY - (SecWeapOffsetY + (SecondaryWeapBg.VL + SecondaryFireWeapon->SecondaryClipIcon.VL) / 2.0f + Offset) * ScaleUI;
+				const float SecClipPosY =  Canvas->ClipY - Canvas->OrgY - (SecWeapOffsetY + (SecondaryWeapBg.VL + SecondaryFireWeapon->GetFireSettings()->SecondaryClipIcon.VL) / 2.0f + Offset) * ScaleUI;
 
 				//draw background in two parts to match number of clip icons
 				const float LeftCornerWidth = 38;
@@ -683,8 +683,8 @@ void ATrueFPSHUD::DrawWeaponHUD()
 				Canvas->DrawItem(TileItem);
 
 				/** Drawing secondary clip **/
-				const float AmmoPerIcon = SecondaryFireWeapon->GetAmmoPerClip() / SecondaryFireWeapon->AmmoIconsCount;
-				for (int32 i = 0; i < SecondaryFireWeapon->AmmoIconsCount; i++)
+				const float AmmoPerIcon = SecondaryFireWeapon->GetAmmoPerClip() / SecondaryFireWeapon->GetFireSettings()->AmmoIconsCount;
+				for (int32 i = 0; i < SecondaryFireWeapon->GetFireSettings()->AmmoIconsCount; i++)
 				{
 					if ((i+1) * AmmoPerIcon > SecondaryFireWeapon->GetCurrentAmmoInClip())
 					{
@@ -698,8 +698,8 @@ void ATrueFPSHUD::DrawWeaponHUD()
 						Canvas->SetDrawColor(Color, Color, Color, Color);
 					}
 
-					const float ClipOffset = SecondaryFireWeapon->SecondaryClipIconOffset * ScaleUI * i;
-					Canvas->DrawIcon(SecondaryFireWeapon->SecondaryClipIcon, SecClipPosX + ClipOffset, SecClipPosY, ScaleUI);
+					const float ClipOffset = SecondaryFireWeapon->GetFireSettings()->SecondaryClipIconOffset * ScaleUI * i;
+					Canvas->DrawIcon(SecondaryFireWeapon->GetFireSettings()->SecondaryClipIcon, SecClipPosX + ClipOffset, SecClipPosY, ScaleUI);
 				}
 
 				const float TextOffset = 10;
@@ -778,7 +778,7 @@ void ATrueFPSHUD::DrawHealth()
 	const float HealthPosX = (Canvas->ClipX - HealthBarBg.UL * ScaleUI) / 2;
 	const float HealthPosY = Canvas->ClipY - (Offset + HealthBarBg.VL) * ScaleUI;
 	Canvas->DrawIcon(HealthBarBg, HealthPosX, HealthPosY, ScaleUI);
-	const float HealthAmount =  FMath::Min(1.0f,MyPawn->Health / MyPawn->GetMaxHealth());
+	const float HealthAmount =  FMath::Min(1.0f,MyPawn->GetHealth() / MyPawn->GetMaxHealth());
 
 	FCanvasTileItem TileItem(FVector2D(HealthPosX,HealthPosY), HealthBar.Texture->GetResource(), 
 							 FVector2D(HealthBar.UL * HealthAmount  * ScaleUI, HealthBar.VL * ScaleUI), FLinearColor::White);
@@ -910,7 +910,7 @@ void ATrueFPSHUD::DrawCrosshair()
 		}
 		
 		ATrueFPSCharacter* Pawn =  Cast<ATrueFPSCharacter>(PCOwner->GetPawn());
-		if (Pawn && Pawn->GetWeapon() && !Pawn->IsPlayerRunning())
+		if (Pawn && Pawn->GetWeapon() && !Pawn->IsRunning())
 		{
 			const float SpreadMulti = 300;
 			ATrueFPSFireWeaponInstant* InstantWeapon = Cast<ATrueFPSFireWeaponInstant>(Pawn->GetWeapon());
@@ -934,13 +934,13 @@ void ATrueFPSHUD::DrawCrosshair()
 			FCanvasIcon* CurrentCrosshair[5];
  			for (int32 i=0; i< 5; i++)
 			{
-				if (MyWeapon && MyWeapon->UseCustomAimingCrosshair && Pawn->IsPlayerAiming())
+				if (MyWeapon && MyWeapon->GetSettings()->UseCustomAimingCrosshair && Pawn->IsAiming())
 				{
-					CurrentCrosshair[i] = &MyWeapon->AimingCrosshair[i];
+					CurrentCrosshair[i] = &MyWeapon->GetSettings()->AimingCrosshair[i];
 				} 
-				else if (MyWeapon && MyWeapon->UseCustomCrosshair)
+				else if (MyWeapon && MyWeapon->GetSettings()->UseCustomCrosshair)
 				{
-					CurrentCrosshair[i] = &MyWeapon->Crosshair[i];
+					CurrentCrosshair[i] = &MyWeapon->GetSettings()->Crosshair[i];
 				} 
 				else
 				{
@@ -948,14 +948,14 @@ void ATrueFPSHUD::DrawCrosshair()
 				}
 			}
 
-			if (Pawn->IsPlayerAiming() && MyWeapon && MyWeapon->UseLaserDot)
+			if (Pawn->IsAiming() && MyWeapon && MyWeapon->GetSettings()->UseLaserDot)
 			{
 				Canvas->SetDrawColor(255,0,0,192);
 				Canvas->DrawIcon(*CurrentCrosshair[ETrueFPSCrosshairDirection::Center],
 					CenterX - (*CurrentCrosshair[ETrueFPSCrosshairDirection::Center]).UL*ScaleUI / 2.0f,
 					CenterY - (*CurrentCrosshair[ETrueFPSCrosshairDirection::Center]).VL*ScaleUI / 2.0f, ScaleUI);
 			}
-			else if ((Pawn->IsPlayerAiming() && !Pawn->GetWeapon()->bHideCrosshairWhileAiming) || (!Pawn->IsPlayerAiming() && !Pawn->GetWeapon()->bHideCrosshairWhileNotAiming))
+			else if ((Pawn->IsAiming() && !Pawn->GetWeapon()->GetSettings()->bHideCrosshairWhileAiming) || (!Pawn->IsAiming() && !Pawn->GetWeapon()->GetSettings()->bHideCrosshairWhileNotAiming))
 			{
 				Canvas->DrawIcon(*CurrentCrosshair[ETrueFPSCrosshairDirection::Center], 
 					CenterX - (*CurrentCrosshair[ETrueFPSCrosshairDirection::Center]).UL*ScaleUI / 2.0f, 

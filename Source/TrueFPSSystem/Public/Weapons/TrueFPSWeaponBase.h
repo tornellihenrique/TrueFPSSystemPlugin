@@ -4,8 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Engine/Canvas.h" // for FCanvasIcon
 #include "TrueFPSTypes.h"
+#include "Settings/TrueFPSWeaponSettings.h"
+#include "State/TrueFPSWeaponState.h"
 #include "TrueFPSWeaponBase.generated.h"
 
 class UAnimMontage;
@@ -16,106 +17,40 @@ class UForceFeedbackEffect;
 class USoundBase;
 class UCameraShakeBase;
 
-namespace EWeaponState
-{
-	enum Type
-	{
-		Idle,
-		Firing,
-		Reloading,
-		Equipping,
-	};
-}
-
-USTRUCT(DisplayName = "Weapon")
-struct FWeaponData
-{
-	GENERATED_USTRUCT_BODY()
-
-	/** time between two consecutive shots */
-	UPROPERTY(EditDefaultsOnly, Category=WeaponStat)
-	float TimeBetweenShots;
-
-	/** defaults */
-	FWeaponData()
-	{
-		TimeBetweenShots = 0.2f;
-	}
-};
-
-USTRUCT()
-struct FWeaponAnim
-{
-	GENERATED_USTRUCT_BODY()
-
-	/** animation played on pawn (1st person view) */
-	UPROPERTY(EditDefaultsOnly, Category="Animation")
-	UAnimMontage* Pawn1P = nullptr;
-
-	/** animation played on pawn (3rd person view) */
-	UPROPERTY(EditDefaultsOnly, Category="Animation")
-	UAnimMontage* Pawn3P = nullptr;
-
-	/** animation played on weapon (1st person view) */
-	UPROPERTY(EditDefaultsOnly, Category="Animation")
-	UAnimMontage* Weapon1P = nullptr;
-
-	/** animation played on weapon (3rd person view) */
-	UPROPERTY(EditDefaultsOnly, Category="Animation")
-	UAnimMontage* Weapon3P = nullptr;
-
-	FWeaponAnim() {}
-};
-
-USTRUCT(DisplayName = "Weapon Animations")
-struct FWeaponAnimProperties
-{
-	GENERATED_USTRUCT_BODY()
-
-	UPROPERTY(EditDefaultsOnly, Category="Animation")
-	float WeightScale = 1.f;
-
-	UPROPERTY(EditAnywhere, Category="Animation")
-	FTransform CustomOffsetTransform;
-
-	UPROPERTY(EditDefaultsOnly, Category="Animation")
-	FTransform OriginRelativeTransform;
-
-	UPROPERTY(EditDefaultsOnly, Category="Animation")
-	FTransform PlacementTransform;
-
-	UPROPERTY(EditDefaultsOnly, Category="Animation")
-	FTransform WallOffsetTransform = FTransform(FRotator(100.f, 0.f, 0.f), FVector(-10.f, 0.f, 0.f));
-
-	UPROPERTY(EditDefaultsOnly, Category="Animation")
-	float WallOffsetTransformMaxDistance = 80.f;
-
-	UPROPERTY(EditDefaultsOnly, Category="Animation")
-	float WallOffsetTransformMinDistance = 30.f;
-
-	UPROPERTY(EditDefaultsOnly, Category="Animation")
-	float AimOffset;
-
-	UPROPERTY(EditDefaultsOnly, Category="Animation")
-	FName SightSocketName = FName("sights");
-
-	UPROPERTY(EditDefaultsOnly, Category="Animation")
-	class UCurveFloat* AimingCurve;
-
-	UPROPERTY(EditDefaultsOnly, Category="Animation|Recoil")
-	FRecoilParams RecoilParams;
-
-	UPROPERTY(EditDefaultsOnly, Category="Animation")
-	EAnimState AnimState = EAnimState::Default;
-
-	UPROPERTY(EditDefaultsOnly, Category="Animation")
-	class UAnimSequence* AnimPose = nullptr;
-};
-
 UCLASS(Abstract)
 class TRUEFPSSYSTEM_API ATrueFPSWeaponBase : public AActor
 {
 	GENERATED_BODY()
+
+protected:
+	
+	/** weapon mesh: 1st person view */
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "TrueFPS Weapon")
+	TObjectPtr<USkeletalMeshComponent> Mesh1P;
+
+	/** weapon mesh: 3rd person view */
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "TrueFPS Weapon")
+	TObjectPtr<USkeletalMeshComponent> Mesh3P;
+	
+	/** pawn owner */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "TrueFPS Weapon", Transient, ReplicatedUsing=OnRep_MyPawn)
+	TObjectPtr<ACharacter> MyPawn;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings|TrueFPS Weapon")
+	TObjectPtr<UTrueFPSWeaponSettings> Settings;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State|TrueFPS Weapon", Transient)
+	FTrueFPSWeaponState State;
+
+	// Replicated State
+	
+	/** burst counter, used for replicating fire events to remote clients */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State|MM Weapon", Transient, ReplicatedUsing = OnRep_BurstCounter)
+	int32 BurstCounter{0};
+
+	/** target sights relative transform */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State|MM Weapon", Transient, Replicated)
+	FTransform TargetSightsRelativeTransform{FTransform::Identity};
 	
 public:
 
@@ -123,7 +58,7 @@ public:
 
 	virtual void BeginPlay() override;
 
-	virtual void Tick(float DeltaSeconds) override;
+	virtual void Tick(float DeltaTime) override;
 	
 	/** perform initial setup */
 	virtual void PostInitializeComponents() override;
@@ -199,7 +134,7 @@ public:
 	// Reading data
 
 	/** get current weapon state */
-	EWeaponState::Type GetCurrentState() const;
+	FTrueFPSWeaponState& GetState();
 
 	/** get weapon mesh (needs pawn owner to determine variant) */
 	USkeletalMeshComponent* GetWeaponMesh() const;
@@ -221,50 +156,6 @@ public:
 	/** get if is first person using interface */
 	bool IsFirstPerson() const;
 
-	/** icon displayed on the HUD when weapon is equipped as primary */
-	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
-	FCanvasIcon PrimaryIcon;
-
-	/** icon displayed on the HUD when weapon is secondary */
-	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
-	FCanvasIcon SecondaryIcon;
-
-	/** crosshair parts icons (left, top, right, bottom and center) */
-	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
-	FCanvasIcon Crosshair[5];
-
-	/** crosshair parts icons when targeting (left, top, right, bottom and center) */
-	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
-	FCanvasIcon AimingCrosshair[5];
-
-	/** only use red colored center part of aiming crosshair */
-	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
-	bool UseLaserDot;
-
-	/** false = default crosshair */
-	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
-	bool UseCustomCrosshair;
-
-	/** false = use custom one if set, otherwise default crosshair */
-	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
-	bool UseCustomAimingCrosshair;
-
-	/** true - crosshair will not be shown unless aiming with the weapon */
-	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
-	bool bHideCrosshairWhileNotAiming = false;
-
-	/** true - crosshair will not be shown unless aiming with the weapon */
-	UPROPERTY(EditDefaultsOnly, Category="Config|HUD")
-	bool bHideCrosshairWhileAiming = true;
-
-	/** Adjustment to handle frame rate affecting actual timer interval. */
-	UPROPERTY(Transient)
-	float TimerIntervalAdjustment;
-
-	/** Whether to allow automatic weapons to catch up with shorter refire cycles */
-	UPROPERTY(EditDefaultsOnly, Category="Config")
-	bool bAllowAutomaticWeaponCatchup = true;
-
 	/** set the weapon's owning pawn */
 	void SetOwningPawn(ACharacter* ACharacter);
 
@@ -284,144 +175,6 @@ public:
 	void GetAttachmentPoints(TArray<class UTrueFPSWeaponAttachmentPoint*>& OutAttachmentPoints) const;
 	
 	FORCEINLINE bool IsCloseToWall() const { return GetWallOffsetTransformAlpha() > 0.f; }
-
-protected:
-
-	/** pawn owner */
-	UPROPERTY(Transient, ReplicatedUsing=OnRep_MyPawn)
-	class ACharacter* MyPawn;
-
-	/** weapon data */
-	UPROPERTY(EditDefaultsOnly, Category="Config", meta = (DisplayPriority = "1"))
-	FWeaponData WeaponConfig;
-
-	/** weapon anim properties */
-	UPROPERTY(EditDefaultsOnly, Category="Config")
-	FWeaponAnimProperties WeaponAnimProperties;
-	
-	/** weapon mesh: 1st person view */
-	UPROPERTY(VisibleDefaultsOnly, Category=Mesh)
-	USkeletalMeshComponent* Mesh1P;
-
-	/** weapon mesh: 3rd person view */
-	UPROPERTY(VisibleDefaultsOnly, Category=Mesh)
-	USkeletalMeshComponent* Mesh3P;
-	
-protected:
-
-	/** firing audio (bLoopedFireSound set) */
-	UPROPERTY(Transient)
-	UAudioComponent* FireAC;
-
-	/** camera shake on firing */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Effects")
-	TSubclassOf<UCameraShakeBase> FireCameraShake;
-
-	/** force feedback effect to play when the weapon is fired */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Effects")
-	UForceFeedbackEffect *FireForceFeedback;
-
-	/** The amount of recoil to apply. We choose a random point from 0-1 on the curve and use it to drive recoil.
-	This means designers get lots of control over the recoil pattern*/
-	UPROPERTY(EditDefaultsOnly, Category = "Config|Effects|Recoil")
-	class UCurveVector* RecoilCurve;
-
-	// the speed at which the recoil bumps up per second
-	UPROPERTY(EditDefaultsOnly, Category = "Config|Effects|Recoil")
-	float RecoilSpeed;
-
-	// the speed at which the recoil resets per second
-	UPROPERTY(EditDefaultsOnly, Category = "Config|Effects|Recoil")
-	float RecoilResetSpeed;
-	
-	/** name of bone/socket for attach sounds in weapon mesh */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Sound")
-	FName SoundsAttachPoint;
-
-	/** single fire sound (bLoopedFireSound not set) */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Sound")
-	USoundBase* FireSound;
-
-	/** looped fire sound (bLoopedFireSound set) */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Sound")
-	USoundBase* FireLoopSound;
-
-	/** finished burst sound (bLoopedFireSound set) */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Sound")
-	USoundBase* FireFinishSound;
-
-	/** out of ammo sound */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Sound")
-	USoundBase* OutOfAmmoSound;
-
-	/** equip sound */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Sound")
-	USoundBase* EquipSound;
-
-	/** equip animations */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Animation")
-	FWeaponAnim EquipAnim;
-
-	/** fire animations */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Animation")
-	FWeaponAnim FireAnim;
-
-	/** is fire sound looped? */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Sound")
-	uint32 bLoopedFireSound : 1;
-
-	/** is fire animation looped? */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Animation")
-	uint32 bLoopedFireAnim : 1;
-
-	/** is fire animation playing? */
-	uint32 bPlayingFireAnim : 1;
-
-	/** is weapon currently equipped? */
-	uint32 bIsEquipped : 1;
-
-	/** is weapon fire active? */
-	uint32 bWantsToFire : 1;
-
-	/** is equip animation playing? */
-	uint32 bPendingEquip : 1;
-
-	/** weapon is refiring */
-	uint32 bRefiring;
-
-	/** current weapon state */
-	EWeaponState::Type CurrentState;
-
-	/** time of last successful weapon fire */
-	float LastFireTime;
-
-	/** last time when this weapon was switched to */
-	float EquipStartedTime;
-
-	/** how much time weapon needs to be equipped */
-	float EquipDuration;
-
-	/** burst counter, used for replicating fire events to remote clients */
-	UPROPERTY(Transient, ReplicatedUsing=OnRep_BurstCounter)
-	int32 BurstCounter;
-
-	/** target sights relative transform */
-	UPROPERTY(Replicated)
-	FTransform TargetSightsRelativeTransform;
-
-	/** [server] current sights being used (nullptr for default)*/
-	UPROPERTY()
-	class ATrueFPSSightsAttachment* CurrentSights = nullptr;
-
-	/** Handle for efficient management of OnEquipFinished timer */
-	FTimerHandle TimerHandle_OnEquipFinished;
-
-	/** Handle for efficient management of HandleFiring timer */
-	FTimerHandle TimerHandle_HandleFiring;
-
-private:
-	
-	TArray<FRecoilInstance> RecoilInstances;
 
 protected:
 
@@ -487,12 +240,17 @@ protected:
 	FORCEINLINE void AddRecoilInstance(const FRecoilParams& RecoilParams)
 	{
 		if (!RecoilParams.IsValid()) return;
-		RecoilInstances.Empty();
-		RecoilInstances.Add(FRecoilInstance(RecoilParams));
+		State.CurrentRecoilInstance = FRecoilInstance(RecoilParams);
 	}
 
 	/** handles recoil instances */
 	void HandleRecoil(float DeltaSeconds);
+
+	void ApplyCameraRecoil();
+	void ResetCameraRecoil();
+	void RefreshCameraRecoil(float DeltaTime);
+	float ClampCameraRecoilRecovery(const float Value, const float Clamp) const;
+	void AddCameraRecoilControlRotation(const FVector2D& Amount) const;
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -502,7 +260,7 @@ protected:
 	void AttachMeshToPawn();
 
 	/** detaches weapon mesh from pawn */
-	void DetachMeshFromPawn();
+	void DetachMeshFromPawn() const;
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -512,10 +270,10 @@ protected:
 	UAudioComponent* PlayWeaponSound(USoundBase* Sound);
 
 	/** play weapon animations */
-	float PlayWeaponAnimation(const FWeaponAnim& Animation);
+	float PlayWeaponAnimation(const FWeaponAnim& Animation) const;
 
 	/** stop playing weapon animations */
-	void StopWeaponAnimation(const FWeaponAnim& Animation);
+	void StopWeaponAnimation(const FWeaponAnim& Animation) const;
 
 	/** Get the aim of the weapon, allowing for adjustments to be made by the weapon */
 	virtual FVector GetAdjustedAim() const;
@@ -531,18 +289,6 @@ protected:
 
 public:
 
-	// The total offset from the accumulated recoil instances
-	FTransform RecoilOffset;
-
-	// The offset applied to the Off-Hand
-	FTransform OffHandAdditiveTransform;
-
-	// The sights transform relative to the weapon actor transform
-	FTransform SightsRelativeTransform;
-
-	// Custom weapon offset transform
-	FTransform OffsetTransform;
-
 	FTransform GetOffsetTransform() const;
 
 	FTransform GetDefaultSightsRelativeTransform() const;
@@ -557,16 +303,13 @@ public:
 	
 	FTransform GetOrientationWorldTransform(const float AimingValue = 0.f) const;
 
-	FWeaponAnimProperties GetAnimProperties() const { return WeaponAnimProperties; }
+	UTrueFPSWeaponSettings* GetSettings() const { return Settings; }
 
-	FORCEINLINE float GetWallOffsetTransformAlpha() const { return WallOffsetTransformAlpha; }
+	FORCEINLINE float GetWallOffsetTransformAlpha() const { return State.WallOffsetTransformAlpha; }
 
 protected:
 	
 	float CalculateWallOffsetTransformAlpha() const;
-
-	UPROPERTY(Transient)
-	float WallOffsetTransformAlpha = 0.f;
 
 	//////////////////////////////////////////////////////////////////////////
 	// Debug
@@ -600,11 +343,9 @@ public:
 	class UStaticMesh* AimOffsetMesh;
 #endif// WITH_EDITORONLY_DATA
 
-protected:
-	
-	/** Returns Mesh1P subobject **/
-	FORCEINLINE USkeletalMeshComponent* GetMesh1P() const { return Mesh1P; }
-	/** Returns Mesh3P subobject **/
-	FORCEINLINE USkeletalMeshComponent* GetMesh3P() const { return Mesh3P; }
-
 };
+
+inline FTrueFPSWeaponState& ATrueFPSWeaponBase::GetState()
+{
+	return State;
+}

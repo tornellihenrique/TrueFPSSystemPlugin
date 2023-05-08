@@ -238,9 +238,12 @@ struct FRecoilParams
 	float Magnitude = 1.f;
 };
 
+USTRUCT(BlueprintType)
 struct FRecoilInstance
 {
-	FRecoilInstance() = delete;
+	GENERATED_BODY()
+	
+	FRecoilInstance(){}
 	FRecoilInstance(const FRecoilParams& RecoilParams) : LocationCurve(RecoilParams.LocationCurve), RotationCurve(RecoilParams.RotationCurve), PlayRate(RecoilParams.PlayRate)
 	{
 		if (!LocationCurve || !RotationCurve) return;

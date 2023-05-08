@@ -7,9 +7,12 @@
 #include "TrueFPSTypes.h"
 #include "InputActionValue.h"
 #include "Character/TrueFPSCharacterInterface.h"
-#include "Components/TimelineComponent.h"
+#include "State/TrueFPSCharacterState.h"
+#include "Settings/TrueFPSCharacterSettings.h"
 #include "TrueFPSCharacter.generated.h"
 
+class UInputAction;
+class UInputMappingContext;
 class UInputComponent;
 class USkeletalMeshComponent;
 class USceneComponent;
@@ -18,55 +21,95 @@ class UAnimMontage;
 class USoundBase;
 class USoundCue;
 
-DECLARE_MULTICAST_DELEGATE_TwoParams(FOnTrueFPSCharacterEquipWeapon, ATrueFPSCharacter*, ATrueFPSWeaponBase* /* new */);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FOnTrueFPSCharacterUnEquipWeapon, ATrueFPSCharacter*, ATrueFPSWeaponBase* /* old */);
-
-UCLASS(Abstract)
+UCLASS(Abstract, AutoExpandCategories = ("Settings|TrueFPS Character", "State|TrueFPS Character"))
 class TRUEFPSSYSTEM_API ATrueFPSCharacter : public ACharacter, public ITrueFPSCharacterInterface
 {
 	GENERATED_BODY()
 
-	UPROPERTY(VisibleDefaultsOnly, Category = Mesh)
-	USkeletalMeshComponent* ClientMesh;
+protected:
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Config|Input", meta=(AllowPrivateAccess = "true"))
-	class UInputMappingContext* DefaultMappingContext;
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "TrueFPS Character")
+	TObjectPtr<USkeletalMeshComponent> ClientMesh;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Config|Input", meta=(AllowPrivateAccess = "true"))
-	class UInputAction* JumpAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings|TrueFPS Character")
+	TObjectPtr<UTrueFPSCharacterSettings> Settings;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Config|Input", meta=(AllowPrivateAccess = "true"))
-	class UInputAction* MoveAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings|TrueFPS Character", Meta = (DisplayThumbnail = false))
+	TObjectPtr<UInputMappingContext> DefaultMappingContext;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Config|Input", meta=(AllowPrivateAccess = "true"))
-	class UInputAction* RunAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings|TrueFPS Character", Meta = (DisplayThumbnail = false))
+	TObjectPtr<UInputAction> JumpAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Config|Input", meta = (AllowPrivateAccess = "true"))
-	class UInputAction* AttackAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings|TrueFPS Character", Meta = (DisplayThumbnail = false))
+	TObjectPtr<UInputAction> MoveAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Config|Input", meta = (AllowPrivateAccess = "true"))
-	class UInputAction* AimingAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings|TrueFPS Character", Meta = (DisplayThumbnail = false))
+	TObjectPtr<UInputAction> LookAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Config|Input", meta = (AllowPrivateAccess = "true"))
-	class UInputAction* NextWeaponAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings|TrueFPS Character", Meta = (DisplayThumbnail = false))
+	TObjectPtr<UInputAction> RunAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Config|Input", meta = (AllowPrivateAccess = "true"))
-	class UInputAction* PreviousWeaponAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings|TrueFPS Character", Meta = (DisplayThumbnail = false))
+	TObjectPtr<UInputAction> AttackAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Config|Input", meta = (AllowPrivateAccess = "true"))
-	class UInputAction* ReloadAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings|TrueFPS Character", Meta = (DisplayThumbnail = false))
+	TObjectPtr<UInputAction> AimingAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Config|Input", meta = (AllowPrivateAccess = "true"))
-	class UInputAction* LeanLeftAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings|TrueFPS Character", Meta = (DisplayThumbnail = false))
+	TObjectPtr<UInputAction> NextWeaponAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Config|Input", meta = (AllowPrivateAccess = "true"))
-	class UInputAction* LeanRightAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings|TrueFPS Character", Meta = (DisplayThumbnail = false))
+	TObjectPtr<UInputAction> PreviousWeaponAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Config|Input", meta = (AllowPrivateAccess = "true"))
-	class UInputAction* CrouchAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings|TrueFPS Character", Meta = (DisplayThumbnail = false))
+	TObjectPtr<UInputAction> ReloadAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Config|Input", meta = (AllowPrivateAccess = "true"))
-	class UInputAction* ToggleSightsAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings|TrueFPS Character", Meta = (DisplayThumbnail = false))
+	TObjectPtr<UInputAction> LeanLeftAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings|TrueFPS Character", Meta = (DisplayThumbnail = false))
+	TObjectPtr<UInputAction> LeanRightAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings|TrueFPS Character", Meta = (DisplayThumbnail = false))
+	TObjectPtr<UInputAction> CrouchAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings|TrueFPS Character", Meta = (DisplayThumbnail = false))
+	TObjectPtr<UInputAction> ToggleSightsAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings|TrueFPS Character", Meta = (ClampMin = 0, ForceUnits = "x"))
+	float LookUpMouseSensitivity{1.0f};
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings|TrueFPS Character", Meta = (ClampMin = 0, ForceUnits = "x"))
+	float LookRightMouseSensitivity{1.0f};
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State|TrueFPS Character", Transient)
+	FTrueFPSCharacterState State;
+
+	// Replicated State
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State|TrueFPS Character", Transient, Replicated)
+	TArray<ATrueFPSWeaponBase*> Inventory;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State|TrueFPS Character", Transient, ReplicatedUsing = OnRep_CurrentWeapon)
+	ATrueFPSWeaponBase* CurrentWeapon;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State|TrueFPS Character", Transient, ReplicatedUsing = OnRep_LastTakeHitInfo)
+	FTakeHitInfo LastTakeHitInfo;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State|TrueFPS Character", Transient, Replicated)
+	float LeanValueTarget{0.f};
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State|TrueFPS Character", Transient, Replicated)
+	float CrouchValueTarget{0.f};
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State|TrueFPS Character", Transient, Replicated)
+	float Health{50.f};
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State|TrueFPS Character", Transient, Replicated)
+	bool bIsAiming{false};
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State|TrueFPS Character", Transient, Replicated)
+	bool bWantsToRun{false};
 
 public:
 	
@@ -78,7 +121,7 @@ public:
 	virtual void PostInitializeComponents() override;
 
 	/** Update the character. (Running, health etc). */
-	virtual void Tick(float DeltaSeconds) override;
+	virtual void Tick(float DeltaTime) override;
 
 	/** cleanup inventory */
 	virtual void Destroyed() override;
@@ -107,6 +150,12 @@ public:
 
 	UFUNCTION(BlueprintPure)
 	FORCEINLINE USkeletalMeshComponent* GetClientMesh() const { return ClientMesh; }
+
+	UFUNCTION(BlueprintPure)
+	FORCEINLINE float GetHealth() const { return Health; }
+
+	UFUNCTION(BlueprintPure)
+	FORCEINLINE bool GetIsDying() const { return State.bIsDying; }
 	
 protected:
 	
@@ -118,40 +167,14 @@ protected:
 
 protected:
 	
-	void Move(const FInputActionValue& Value);
-
-	void LookUpDown(const float Value);
-	void TurnRightLeft(const float Value);
+	void Move(const FInputActionValue& ActionValue);
+	void Look(const FInputActionValue& ActionValue);
 
 public:
-
-	// The last updated pitch input value
-	UPROPERTY(BlueprintReadOnly, Category = "Character|Locomotion")
-	float CurrentPitchInputValue = 0.f;
-
-	// The last updated yaw input value
-	UPROPERTY(BlueprintReadOnly, Category = "Character|Locomotion")
-	float CurrentYawInputValue = 0.f;
-
-	// The last updated roll input value
-	UPROPERTY(BlueprintReadOnly, Category = "Character|Locomotion")
-	float CurrentRollInputValue = 0.f;
 	
-	virtual void AddControllerPitchInput(float Val) override
-	{
-		Super::AddControllerPitchInput(Val);
-		CurrentPitchInputValue = Val;
-	}
-	virtual void AddControllerYawInput(float Val) override
-	{
-		Super::AddControllerYawInput(Val);
-		CurrentYawInputValue = Val;
-	}
-	virtual void AddControllerRollInput(float Val) override
-	{
-		Super::AddControllerRollInput(Val);
-		CurrentRollInputValue = Val;
-	}
+	virtual void AddControllerPitchInput(float Val) override;
+	virtual void AddControllerYawInput(float Val) override;
+	virtual void AddControllerRollInput(float Val) override;
 
 	//////////////////////////////////////////////////////////////////////////
 	// Inventory
@@ -204,32 +227,6 @@ public:
 	/** [server + local] change aiming state */
 	void SetAiming(bool bNewAiming);
 
-	/** Applies recoil to the camera.
-	@param RecoilAmount the amount to recoil by. X is the yaw, Y is the pitch
-	@param RecoilSpeed the speed to bump the camera up per second from the recoil
-	@param RecoilResetSpeed the speed the camera will return to center at per second after the recoil is finished*/
-	void LocalApplyRecoil(const FVector2D& RecoilAmount, const float RecoilSpeed, const float RecoilResetSpeed);
-
-	//The amount of recoil to apply. We store this in a variable as we smoothly apply the recoil over several frames
-	UPROPERTY(VisibleAnywhere, Category = "Weapons|Recoil")
-	FVector2D RecoilBumpAmount;
-
-	//The amount of recoil the gun has had, that we need to reset (After shooting we slowly want the recoil to return to normal.)
-	UPROPERTY(VisibleAnywhere, Category = "Weapons|Recoil")
-	FVector2D RecoilResetAmount;
-
-	//The speed at which the recoil bumps up per second
-	UPROPERTY(EditDefaultsOnly, Category = "Config|Weapons|Recoil")
-	float CurrentRecoilSpeed;
-
-	//The speed at which the recoil resets per second
-	UPROPERTY(EditDefaultsOnly, Category = "Config|Weapons|Recoil")
-	float CurrentRecoilResetSpeed;
-
-	//The last time that we applied recoil
-	UPROPERTY(VisibleAnywhere, Category = "Config|Weapons|Recoil")
-	float LastRecoilTime;
-
 	//////////////////////////////////////////////////////////////////////////
 	// Movement
 
@@ -246,17 +243,17 @@ public:
 	virtual void StopAnimMontage(class UAnimMontage* AnimMontage) override;
 
 	/** stop playing all montages */
-	void StopAllAnimMontages();
+	void StopAllAnimMontages() const;
 
 	//////////////////////////////////////////////////////////////////////////
 	// Input handlers
 
 	/** player pressed start fire action */
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "TrueFPS|TrueFPS Character")
 	void OnStartFire();
 
 	/** player released start fire action */
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "TrueFPS|TrueFPS Character")
 	void OnStopFire();
 
 	/** player pressed aiming action */
@@ -308,21 +305,12 @@ public:
 	// Reading data
 
 	/** get mesh component */
-	UFUNCTION(BlueprintPure)
+	UFUNCTION(BlueprintPure, Category = "TrueFPS|TrueFPS Character")
 	USkeletalMeshComponent* GetPawnMesh() const;
 
 	/** get currently equipped weapon */
-	UFUNCTION(BlueprintCallable, Category = "Game|Weapon")
+	UFUNCTION(BlueprintCallable, Category = "TrueFPS|TrueFPS Character")
 	class ATrueFPSWeaponBase* GetWeapon() const;
-
-	/** Global notification when a character equips a weapon. Needed for replication graph. */
-	static FOnTrueFPSCharacterEquipWeapon NotifyEquipWeapon;
-
-	/** Global notification when a character un-equips a weapon. Needed for replication graph. */
-	static FOnTrueFPSCharacterUnEquipWeapon NotifyUnEquipWeapon;
-
-	/** get weapon attach point */
-	FName GetWeaponAttachPoint() const;
 
 	/** get total number of inventory items */
 	int32 GetInventoryCount() const;
@@ -332,35 +320,23 @@ public:
 	*
 	* @param Index Inventory index
 	*/
-	class ATrueFPSWeaponBase* GetInventoryWeapon(int32 index) const;
+	class ATrueFPSWeaponBase* GetInventoryWeapon(int32 Index) const;
 
-	/** get weapon taget modifier speed	*/
-	UFUNCTION(BlueprintCallable, Category = "Game|Weapon")
+	/** get weapon target modifier speed	*/
+	UFUNCTION(BlueprintCallable, Category = "TrueFPS|TrueFPS Character")
 	float GetAimingSpeedModifier() const;
 
 	/** get aiming state */
-	UFUNCTION(BlueprintCallable, Category = "Game|Weapon")
-	bool IsPlayerAiming() const;
-
-	virtual bool IsAiming_Implementation() const override { return IsPlayerAiming(); }
-
-	/** get firing state */
-	UFUNCTION(BlueprintCallable, Category = "Game|Weapon")
-	bool IsFiring() const;
+	UFUNCTION(BlueprintCallable, Category = "TrueFPS|TrueFPS Character")
+	bool IsAiming() const;
 
 	/** get the modifier value for running speed */
 	UFUNCTION(BlueprintCallable, Category = Pawn)
 	float GetRunningSpeedModifier() const;
 
 	/** get running state */
-	UFUNCTION(BlueprintCallable, Category = Pawn)
-	bool IsPlayerRunning() const;
-
-	/** get camera view type */
-	UFUNCTION(BlueprintCallable, Category = Mesh)
-	virtual bool IsFirstPersonPlayer() const;
-
-	virtual USkeletalMeshComponent* GetSpecificPawnMesh_Implementation(bool WantFirstPerson) const override { return WantFirstPerson ? ClientMesh : GetMesh(); }
+	UFUNCTION(BlueprintCallable, Category = "TrueFPS|TrueFPS Character")
+	bool IsRunning() const;
 
 	/** get max health */
 	int32 GetMaxHealth() const;
@@ -373,105 +349,23 @@ public:
 
 protected:
 
-	/** default inventory list */
-	UPROPERTY(EditDefaultsOnly, Category = "Config", meta = (DisplayPriority = "1"))
-	TArray<TSubclassOf<class ATrueFPSWeaponBase> > DefaultInventoryClasses;
-
-	/** weapons in inventory */
-	UPROPERTY(Transient, Replicated)
-	TArray<class ATrueFPSWeaponBase*> Inventory;
-
-	/** currently equipped weapon */
-	UPROPERTY(Transient, ReplicatedUsing = OnRep_CurrentWeapon)
-	class ATrueFPSWeaponBase* CurrentWeapon;
-
-	/** Replicate where this pawn was last hit and damaged */
-	UPROPERTY(Transient, ReplicatedUsing = OnRep_LastTakeHitInfo)
-	FTakeHitInfo LastTakeHitInfo;
-
-	/** Time at which point the last take hit info for the actor times out and won't be replicated; Used to stop join-in-progress effects all over the screen */
-	float LastTakeHitTimeTimeout;
-
-	/** modifier for max movement speed */
-	UPROPERTY(EditDefaultsOnly, Category = "Config|Weapons")
-	float AimingSpeedModifier;
-
-	/** current aiming state */
-	UPROPERTY(Transient, Replicated)
-	uint8 bIsAiming : 1;
-
-	/** modifier for max movement speed */
-	UPROPERTY(EditDefaultsOnly, Category = "Config|Pawn")
-	float RunningSpeedModifier;
-
-	/** current running state */
-	UPROPERTY(Transient, Replicated)
-	uint8 bWantsToRun : 1;
-
-	/** current aiming state alpha */
-	UPROPERTY(Transient, Replicated)
-	float ADSValue = 0.f;
-
-	/** current firing state */
-	uint8 bWantsToFire : 1;
-
-	/** when low health effects should start */
-	float LowHealthPercentage;
-
-	/** animation played on death */
-	UPROPERTY(EditDefaultsOnly, Category = "Config|Animation")
-	UAnimMontage* DeathAnim;
-
-	/** sound played when aiming state changes */
-	UPROPERTY(EditDefaultsOnly, Category = "Config|Pawn")
-	USoundCue* AimingSound;
-
-	/** sound played on death, local player only */
-	UPROPERTY(EditDefaultsOnly, Category = "Config|Pawn")
-	USoundCue* DeathSound;
-
-	/** socket or bone name for attaching weapon mesh */
-	UPROPERTY(EditDefaultsOnly, Category = "Config|Pawn")
-	FName WeaponAttachPoint = FName("weapon_r");
-
-	/** right hand socket name */
-	UPROPERTY(EditDefaultsOnly, Category = "Config|Pawn")
-	FName RightHandSocket = FName("hand_r");
-
-	/** left hand socket name */
-	UPROPERTY(EditDefaultsOnly, Category = "Config|Pawn")
-	FName LeftHandSocket = FName("hand_l");
-
-	/** dominant hand */
-	UPROPERTY(EditDefaultsOnly, Category = "Config|Pawn")
-	bool bRightHanded = true;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Config|Pawn")
-	float LeanAmount = 45.f;
-	
-	UPROPERTY(BlueprintReadWrite)
-	float LeanValue = 0.f;
-	
-	UPROPERTY(BlueprintReadWrite, Replicated)
-	float LeanValueTarget = 0.f;
-
-	void ChangeLeanValue(float NewLeanValue);
+	void SetLeanValue(float NewLeanValue);
 
 	UFUNCTION(Server, Reliable)
-	void ServerChangeLeanValue(float NewLeanValue);
-	
-	UPROPERTY(BlueprintReadWrite)
-	float CrouchValue = 0.f;
-	
-	UPROPERTY(BlueprintReadWrite, Replicated)
-	float CrouchValueTarget = 0.f;
+	void ServerSetLeanValue(float NewLeanValue);
 
 	void ToggleCrouching(bool bNewCrouching);
 
 	UFUNCTION(Server, Reliable)
 	void ServerToggleCrouching(bool bNewCrouching);
 
-public:
+	void RefreshLeanValue(float DeltaTime);
+
+	void RefreshCrouchValue(float DeltaTime);
+
+	void RefreshHealthRegen(float DeltaTime);
+
+	void RefreshWallAvoidanceState(float DeltaTime);
 
 protected:
 	
@@ -481,65 +375,45 @@ protected:
 private:
 
 	/** Whether or not the character is moving (based on movement input). */
-	bool IsMoving();
-
-	/** Used for handling AimingCurve */
-	FTimeline AimingTimeline;
-
-	/** AimingTimeline progress function */
-	virtual void AimingTimelineProgress(const float Value);
-
-protected:
-
-	/** AimingTimeline complete  function */
-	UFUNCTION(BlueprintNativeEvent)
-	void AimingTimelineComplete();
+	bool IsMoving() const;
 
 	//////////////////////////////////////////////////////////////////////////
 	// TrueFPSCharacterInterface overriding
 	
 public:
 
-	virtual bool CanFire_Implementation() override { return CanFire(); }
+	virtual bool TrueFPSInterface_IsAlive_Implementation() const override;
 
-	virtual bool CanReload_Implementation() override { return CanReload(); }
+	virtual USkeletalMeshComponent* TrueFPSInterface_GetSpecificPawnMesh_Implementation(bool WantFirstPerson) const override;
 
-	virtual FName GetWeaponAttachPoint_Implementation() override { return GetWeaponAttachPoint(); }
+	virtual FRotator TrueFPSInterface_GetLastUpdatedRotationValues_Implementation() const override;
 
-	virtual bool IsRunning_Implementation() override { return IsPlayerRunning(); }
+	virtual FTransform TrueFPSInterface_GetDomHandTransform_Implementation() const override;
 
-	virtual bool IsFirstPerson_Implementation() override { return IsFirstPersonPlayer(); }
+	virtual bool TrueFPSInterface_IsRunning_Implementation() const override;
 
-	virtual FRotator GetLastUpdatedRotationValues_Implementation() override { return FRotator(CurrentPitchInputValue, CurrentYawInputValue, CurrentRollInputValue); }
+	virtual float TrueFPSInterface_GetCrouchValue_Implementation() const override;
 
-	virtual FTransform GetDomHandTransform_Implementation() override { return GetMesh()->GetSocketTransform(bRightHanded ? RightHandSocket : LeftHandSocket); }
+	virtual float TrueFPSInterface_GetLeanValue_Implementation() const override;
 
-	virtual float GetADSValue_Implementation() override { return ADSValue; }
+	virtual FVector TrueFPSInterface_GetFirstPersonCameraTarget_Implementation() const override;
 
-	virtual FVector GetFirstPersonCameraTarget_Implementation() const override;
+	virtual FRotator TrueFPSInterface_GetFirstPersonCameraTargetRotation_Implementation() const override;
 
-	virtual FRotator GetFirstPersonCameraTargetRotation_Implementation() const override;
-	
-	virtual float GetCrouchValue_Implementation() const override { return CrouchValue; }
+	virtual bool TrueFPSInterface_HasCurrentWeapon_Implementation() const override;
 
-	virtual float GetLeanValue_Implementation() override { return LeanValue; }
+	virtual class ATrueFPSWeaponBase* TrueFPSInterface_GetCurrentWeapon_Implementation() const override;
 
-	virtual void ApplyRecoil_Implementation(const FVector2D& RecoilAmount, const float RecoilSpeed, const float RecoilResetSpeed) override
-	{
-		LocalApplyRecoil(RecoilAmount, RecoilSpeed, RecoilResetSpeed);
-	}
-	
+	virtual bool TrueFPSInterface_IsAiming_Implementation() const override;
+
+	virtual bool TrueFPSInterface_CanFire_Implementation() const override;
+
+	virtual bool TrueFPSInterface_CanReload_Implementation() const override;
+
+	virtual float TrueFPSInterface_GetAimingInterpSpeed_Implementation() const override;
 
 	//////////////////////////////////////////////////////////////////////////
 	// Damage & death
-
-	/** Identifies if pawn is in its dying state */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State|Health")
-	uint32 bIsDying : 1;
-
-	// Current health of the Pawn
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "State|Health")
-	float Health;
 
 	/** Take damage, handle death */
 	virtual float TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, class AActor* DamageCauser) override;
@@ -616,10 +490,99 @@ protected:
 	void ServerSetRunning(bool bNewRunning, bool bToggle);
 
 	/** Builds list of points to check for pausing replication for a connection*/
-	void BuildPauseReplicationCheckPoints(TArray<FVector>& RelevancyCheckPoints);
-
-	virtual ATrueFPSWeaponBase* GetCurrentWeapon_Implementation() override { return CurrentWeapon; }
-
-	virtual bool HasCurrentWeapon_Implementation() override { return CurrentWeapon ? true : false; }
+	void BuildPauseReplicationCheckPoints(TArray<FVector>& RelevancyCheckPoints) const;
 	
 };
+
+inline void ATrueFPSCharacter::AddControllerPitchInput(float Val)
+{
+	Super::AddControllerPitchInput(Val);
+	State.CurrentPitchControllerInput = Val;
+}
+
+inline void ATrueFPSCharacter::AddControllerYawInput(float Val)
+{
+	Super::AddControllerYawInput(Val);
+	State.CurrentYawControllerInput = Val;
+}
+
+inline void ATrueFPSCharacter::AddControllerRollInput(float Val)
+{
+	Super::AddControllerRollInput(Val);
+	State.CurrentRollControllerInput = Val;
+}
+
+inline bool ATrueFPSCharacter::TrueFPSInterface_IsAlive_Implementation() const
+{
+	return IsAlive();
+}
+
+inline USkeletalMeshComponent* ATrueFPSCharacter::TrueFPSInterface_GetSpecificPawnMesh_Implementation(bool WantFirstPerson) const
+{
+	return WantFirstPerson ? ClientMesh : GetMesh();
+}
+
+inline FRotator ATrueFPSCharacter::TrueFPSInterface_GetLastUpdatedRotationValues_Implementation() const
+{
+	return State.GetCurrentControllerInput();
+}
+
+inline FTransform ATrueFPSCharacter::TrueFPSInterface_GetDomHandTransform_Implementation() const
+{
+	return GetMesh()->GetSocketTransform(Settings->bRightHanded ? Settings->RightHandName : Settings->LeftHandName);
+}
+
+inline bool ATrueFPSCharacter::TrueFPSInterface_IsRunning_Implementation() const
+{
+	return IsRunning();
+}
+
+inline float ATrueFPSCharacter::TrueFPSInterface_GetCrouchValue_Implementation() const
+{
+	return State.CrouchValue;
+}
+
+inline float ATrueFPSCharacter::TrueFPSInterface_GetLeanValue_Implementation() const
+{
+	return State.LeanValue;
+}
+
+inline FVector ATrueFPSCharacter::TrueFPSInterface_GetFirstPersonCameraTarget_Implementation() const
+{
+	return GetMesh()->GetSocketLocation(FName("head"));
+}
+
+inline FRotator ATrueFPSCharacter::TrueFPSInterface_GetFirstPersonCameraTargetRotation_Implementation() const
+{
+	return GetControlRotation();
+}
+
+inline bool ATrueFPSCharacter::TrueFPSInterface_HasCurrentWeapon_Implementation() const
+{
+	return CurrentWeapon != nullptr;
+}
+
+inline ATrueFPSWeaponBase* ATrueFPSCharacter::TrueFPSInterface_GetCurrentWeapon_Implementation() const
+{
+	return CurrentWeapon;
+}
+
+inline bool ATrueFPSCharacter::TrueFPSInterface_IsAiming_Implementation() const
+{
+	return IsAiming();
+}
+
+inline bool ATrueFPSCharacter::TrueFPSInterface_CanFire_Implementation() const
+{
+	return CanFire();
+}
+
+inline bool ATrueFPSCharacter::TrueFPSInterface_CanReload_Implementation() const
+{
+	return CanFire();
+}
+
+inline float ATrueFPSCharacter::TrueFPSInterface_GetAimingInterpSpeed_Implementation() const
+{
+	return Settings->AimingInterpSpeed;
+}

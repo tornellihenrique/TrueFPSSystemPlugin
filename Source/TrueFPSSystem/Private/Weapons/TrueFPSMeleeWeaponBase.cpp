@@ -47,7 +47,7 @@ void ATrueFPSMeleeWeaponBase::ServerNotifyHit_Implementation(const FHitResult& I
 	// if we have an instigator, calculate dot between the view and the shot
 	if (GetInstigator() && ((Impact.GetActor() && !AttackedActors.Contains(Impact.GetActor())) || Impact.bBlockingHit))
 	{
-		if (CurrentState != EWeaponState::Idle)
+		if (State.CurrentState != EWeaponState::Idle)
 		{
 			if (Impact.GetActor() == nullptr)
 			{

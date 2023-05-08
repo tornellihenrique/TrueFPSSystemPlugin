@@ -10,9 +10,9 @@ ATrueFPSFireWeaponProjectile::ATrueFPSFireWeaponProjectile(const FObjectInitiali
 {
 }
 
-void ATrueFPSFireWeaponProjectile::ApplyWeaponConfig(FProjectileWeaponData& Data)
+void ATrueFPSFireWeaponProjectile::ApplyWeaponConfig(UTrueFPSFireWeaponProjectileSettings* Data)
 {
-	Data = ProjectileConfig;
+	Data = FireProjectileSettings;
 }
 
 void ATrueFPSFireWeaponProjectile::FireWeapon()
@@ -71,7 +71,7 @@ void ATrueFPSFireWeaponProjectile::FireWeapon()
 void ATrueFPSFireWeaponProjectile::ServerFireProjectile_Implementation(FVector Origin, FVector_NetQuantizeNormal ShootDir)
 {
 	FTransform SpawnTM(ShootDir.Rotation(), Origin);
-	ATrueFPSProjectile* Projectile = Cast<ATrueFPSProjectile>(UGameplayStatics::BeginDeferredActorSpawnFromClass(this, ProjectileConfig.ProjectileClass, SpawnTM));
+	ATrueFPSProjectile* Projectile = Cast<ATrueFPSProjectile>(UGameplayStatics::BeginDeferredActorSpawnFromClass(this, FireProjectileSettings->ProjectileClass, SpawnTM));
 	if (Projectile)
 	{
 		Projectile->SetInstigator(GetInstigator());

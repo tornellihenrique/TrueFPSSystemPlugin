@@ -52,11 +52,11 @@ bool ATrueFPSPlayerCameraManager::CustomCameraBehavior(float DeltaTime, FVector&
 	if (!MyCharacter) return false;
 	if (!MyCharacter->Implements<UTrueFPSCharacterInterface>()) return false;
 
-	const FVector& FPTarget = ITrueFPSCharacterInterface::Execute_GetFirstPersonCameraTarget(MyCharacter);
-	const FRotator& FPTargetRotation = ITrueFPSCharacterInterface::Execute_GetFirstPersonCameraTargetRotation(MyCharacter);
+	const FVector& FPTarget = ITrueFPSCharacterInterface::Execute_TrueFPSInterface_GetFirstPersonCameraTarget(MyCharacter);
+	const FRotator& FPTargetRotation = ITrueFPSCharacterInterface::Execute_TrueFPSInterface_GetFirstPersonCameraTargetRotation(MyCharacter);
 
 	// FOV changing
-	const float TargetFOV = ITrueFPSCharacterInterface::Execute_IsAiming(MyCharacter) ? TargetingFOV : NormalFOV;
+	const float TargetFOV = ITrueFPSCharacterInterface::Execute_TrueFPSInterface_IsAiming(MyCharacter) ? TargetingFOV : NormalFOV;
 
 	FTransform TargetTransform(FPTargetRotation, FPTarget, FVector::OneVector);
 

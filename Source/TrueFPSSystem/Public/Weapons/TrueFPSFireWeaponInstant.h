@@ -3,10 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Settings/TrueFPSFireWeaponInstantSettings.h"
 #include "Weapons/TrueFPSFireWeaponBase.h"
 #include "TrueFPSFireWeaponInstant.generated.h"
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FInstantHitInfo
 {
 	GENERATED_USTRUCT_BODY()
@@ -28,67 +29,22 @@ struct FInstantHitInfo
 	}
 };
 
-USTRUCT(DisplayName = "Weapon Instant")
-struct FInstantWeaponData
-{
-	GENERATED_USTRUCT_BODY()
-
-	/** base weapon spread (degrees) */
-	UPROPERTY(EditDefaultsOnly, Category=Accuracy)
-	float WeaponSpread;
-
-	/** targeting spread modifier */
-	UPROPERTY(EditDefaultsOnly, Category=Accuracy)
-	float TargetingSpreadMod;
-
-	/** continuous firing: spread increment */
-	UPROPERTY(EditDefaultsOnly, Category=Accuracy)
-	float FiringSpreadIncrement;
-
-	/** continuous firing: max increment */
-	UPROPERTY(EditDefaultsOnly, Category=Accuracy)
-	float FiringSpreadMax;
-
-	/** weapon range */
-	UPROPERTY(EditDefaultsOnly, Category=WeaponStat)
-	float WeaponRange;
-
-	/** damage amount */
-	UPROPERTY(EditDefaultsOnly, Category=WeaponStat)
-	int32 HitDamage;
-
-	/** type of damage */
-	UPROPERTY(EditDefaultsOnly, Category=WeaponStat)
-	TSubclassOf<UDamageType> DamageType;
-
-	/** hit verification: scale for bounding box of hit actor */
-	UPROPERTY(EditDefaultsOnly, Category=HitVerification)
-	float ClientSideHitLeeway;
-
-	/** hit verification: threshold for dot product between view direction and hit direction */
-	UPROPERTY(EditDefaultsOnly, Category=HitVerification)
-	float AllowedViewDotHitDir;
-
-	/** defaults */
-	FInstantWeaponData()
-	{
-		WeaponSpread = 5.0f;
-		TargetingSpreadMod = 0.25f;
-		FiringSpreadIncrement = 1.0f;
-		FiringSpreadMax = 10.0f;
-		WeaponRange = 10000.0f;
-		HitDamage = 10;
-		DamageType = UDamageType::StaticClass();
-		ClientSideHitLeeway = 200.0f;
-		AllowedViewDotHitDir = 0.8f;
-	}
-};
-
 // A weapon where the damage impact occurs instantly upon firing
 UCLASS(Abstract)
 class TRUEFPSSYSTEM_API ATrueFPSFireWeaponInstant : public ATrueFPSFireWeaponBase
 {
 	GENERATED_BODY()
+
+protected:
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings|TrueFPS Fire Weapon Instant")
+	TObjectPtr<UTrueFPSFireWeaponInstantSettings> FireInstantSettings;
+
+	// Replicated State
+	
+	/** instant hit notify for replication */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State|TrueFPS Fire Weapon Instant", Transient, ReplicatedUsing=OnRep_HitNotify)
+	FInstantHitInfo HitNotify;
 
 public:
 
@@ -103,38 +59,6 @@ protected:
 	{
 		return EAmmoType::EBullet;
 	}
-
-	/** weapon config */
-	UPROPERTY(EditDefaultsOnly, Category="Config")
-	FInstantWeaponData InstantConfig;
-
-	/** impact effects */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Effects")
-	TSubclassOf<class ATrueFPSImpactEffect> ImpactTemplate;
-
-	/** smoke trail */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Trail")
-	UParticleSystem* TrailFX;
-
-	/** param name for beam target in smoke trail */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Trail")
-	FName TrailTargetParam;
-
-	/** niagara smoke trail */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Trail")
-	TSoftObjectPtr<UNiagaraSystem> NiagaraTrailFX;
-
-	/** niagara param name for beam target in smoke trail */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Trail")
-	FName NiagaraTrailTargetParam;
-
-	/** niagara param name for beam trigger in smoke trail */
-	UPROPERTY(EditDefaultsOnly, Category="Config|Effects|Trail")
-	FName NiagaraTrailTriggerParam;
-
-	/** instant hit notify for replication */
-	UPROPERTY(Transient, ReplicatedUsing=OnRep_HitNotify)
-	FInstantHitInfo HitNotify;
 
 	/** current spread from continuous firing */
 	float CurrentFiringSpread;

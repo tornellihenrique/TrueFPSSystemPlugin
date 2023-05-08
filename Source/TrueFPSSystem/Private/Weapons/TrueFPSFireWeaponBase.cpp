@@ -15,21 +15,25 @@
 
 ATrueFPSFireWeaponBase::ATrueFPSFireWeaponBase(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
-	bLoopedMuzzleFX = false;
-	bPendingReload = false;
+}
 
-	CurrentAmmo = 0;
-	CurrentAmmoInClip = 0;
+void ATrueFPSFireWeaponBase::BeginPlay()
+{
+	check(IsValid(FireSettings));
+	
+	Super::BeginPlay();
 }
 
 void ATrueFPSFireWeaponBase::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 
-	if (FireWeaponConfig.InitialClips > 0)
+	if (!IsValid(Settings)) return;
+
+	if (FireSettings->InitialClips > 0)
 	{
-		CurrentAmmoInClip = FireWeaponConfig.AmmoPerClip;
-		CurrentAmmo = FireWeaponConfig.AmmoPerClip * FireWeaponConfig.InitialClips;
+		CurrentAmmoInClip = FireSettings->AmmoPerClip;
+		CurrentAmmo = FireSettings->AmmoPerClip * FireSettings->InitialClips;
 	}
 }
 
@@ -55,34 +59,33 @@ int32 ATrueFPSFireWeaponBase::GetCurrentAmmoInClip() const
 
 int32 ATrueFPSFireWeaponBase::GetAmmoPerClip() const
 {
-	return FireWeaponConfig.AmmoPerClip;
+	return FireSettings->AmmoPerClip;
 }
 
 int32 ATrueFPSFireWeaponBase::GetMaxAmmo() const
 {
-	return FireWeaponConfig.MaxAmmo;
+	return FireSettings->MaxAmmo;
 }
 
 bool ATrueFPSFireWeaponBase::HasInfiniteAmmo() const
 {
 	const ATrueFPSPlayerController* MyPC = (MyPawn != nullptr) ? Cast<const ATrueFPSPlayerController>(MyPawn->Controller) : nullptr;
-	return FireWeaponConfig.bInfiniteAmmo || (MyPC && MyPC->HasInfiniteAmmo());
+	return FireSettings->bInfiniteAmmo || (MyPC && MyPC->HasInfiniteAmmo());
 }
 
 bool ATrueFPSFireWeaponBase::HasInfiniteClip() const
 {
 	const ATrueFPSPlayerController* MyPC = (MyPawn != nullptr) ? Cast<const ATrueFPSPlayerController>(MyPawn->Controller) : nullptr;
-	return FireWeaponConfig.bInfiniteClip || (MyPC && MyPC->HasInfiniteClip());
+	return FireSettings->bInfiniteClip || (MyPC && MyPC->HasInfiniteClip());
 }
 
 void ATrueFPSFireWeaponBase::GiveAmmo(int AddAmount)
 {
-	const int32 MissingAmmo = FMath::Max(0, FireWeaponConfig.MaxAmmo - CurrentAmmo);
+	const int32 MissingAmmo = FMath::Max(0, FireSettings->MaxAmmo - CurrentAmmo);
 	AddAmount = FMath::Min(AddAmount, MissingAmmo);
 	CurrentAmmo += AddAmount;
 
-	ATrueFPSAIController* BotAI = MyPawn ? Cast<ATrueFPSAIController>(MyPawn->GetController()) : NULL;
-	if (BotAI)
+	if (ATrueFPSAIController* BotAI = MyPawn ? Cast<ATrueFPSAIController>(MyPawn->GetController()) : nullptr)
 	{
 		BotAI->CheckAmmo(this);
 	}
@@ -90,7 +93,7 @@ void ATrueFPSFireWeaponBase::GiveAmmo(int AddAmount)
 	// start reload if clip was empty
 	if (GetCurrentAmmoInClip() <= 0 &&
 		CanReload() &&
-		MyPawn && MyPawn->Implements<UTrueFPSCharacterInterface>() && (ITrueFPSCharacterInterface::Execute_GetCurrentWeapon(MyPawn) == this))
+		MyPawn && MyPawn->Implements<UTrueFPSCharacterInterface>() && (ITrueFPSCharacterInterface::Execute_TrueFPSInterface_GetCurrentWeapon(MyPawn) == this))
 	{
 		ClientStartReload();
 	}
@@ -108,8 +111,8 @@ void ATrueFPSFireWeaponBase::UseAmmo()
 		CurrentAmmo--;
 	}
 
-	ATrueFPSAIController* BotAI = MyPawn ? Cast<ATrueFPSAIController>(MyPawn->GetController()) : NULL;	
-	ATrueFPSPlayerController* PlayerController = MyPawn ? Cast<ATrueFPSPlayerController>(MyPawn->GetController()) : NULL;
+	ATrueFPSAIController* BotAI = MyPawn ? Cast<ATrueFPSAIController>(MyPawn->GetController()) : nullptr;
+	const ATrueFPSPlayerController* PlayerController = MyPawn ? Cast<ATrueFPSPlayerController>(MyPawn->GetController()) : nullptr;
 	if (BotAI)
 	{
 		BotAI->CheckAmmo(this);
@@ -127,11 +130,11 @@ void ATrueFPSFireWeaponBase::OnUnEquip()
 {
 	if (bPendingReload)
 	{
-		StopWeaponAnimation(ReloadAnim);
+		StopWeaponAnimation(FireSettings->ReloadAnim);
 		bPendingReload = false;
 
-		GetWorldTimerManager().ClearTimer(TimerHandle_StopReload);
-		GetWorldTimerManager().ClearTimer(TimerHandle_ReloadWeapon);
+		GetWorldTimerManager().ClearTimer(FireState.TimerHandle_StopReload);
+		GetWorldTimerManager().ClearTimer(FireState.TimerHandle_ReloadWeapon);
 	}
 	
 	Super::OnUnEquip();
@@ -165,42 +168,42 @@ void ATrueFPSFireWeaponBase::StartReload(bool bFromReplication)
 		bPendingReload = true;
 		DetermineWeaponState();
 
-		float AnimDuration = PlayWeaponAnimation(ReloadAnim);		
+		float AnimDuration = PlayWeaponAnimation(FireSettings->ReloadAnim);		
 		if (AnimDuration <= 0.0f)
 		{
-			AnimDuration = FireWeaponConfig.NoAnimReloadDuration;
+			AnimDuration = FireSettings->NoAnimReloadDuration;
 		}
 
-		GetWorldTimerManager().SetTimer(TimerHandle_StopReload, this, &ThisClass::StopReload, AnimDuration, false);
+		GetWorldTimerManager().SetTimer(FireState.TimerHandle_StopReload, this, &ThisClass::StopReload, AnimDuration, false);
 		if (GetLocalRole() == ROLE_Authority)
 		{
-			GetWorldTimerManager().SetTimer(TimerHandle_ReloadWeapon, this, &ThisClass::ReloadWeapon, FMath::Max(0.1f, AnimDuration - 0.1f), false);
+			GetWorldTimerManager().SetTimer(FireState.TimerHandle_ReloadWeapon, this, &ThisClass::ReloadWeapon, FMath::Max(0.1f, AnimDuration - 0.1f), false);
 		}
 		
 		if (MyPawn && MyPawn->IsLocallyControlled())
 		{
-			PlayWeaponSound(ReloadSound);
+			PlayWeaponSound(FireSettings->ReloadSound);
 		}
 	}
 }
 
 void ATrueFPSFireWeaponBase::StopReload()
 {
-	if (CurrentState == EWeaponState::Reloading)
+	if (State.CurrentState == EWeaponState::Reloading)
 	{
 		bPendingReload = false;
 		DetermineWeaponState();
-		StopWeaponAnimation(ReloadAnim);
+		StopWeaponAnimation(FireSettings->ReloadAnim);
 	}
 }
 
 void ATrueFPSFireWeaponBase::ReloadWeapon()
 {
-	int32 ClipDelta = FMath::Min(FireWeaponConfig.AmmoPerClip - CurrentAmmoInClip, CurrentAmmo - CurrentAmmoInClip);
+	int32 ClipDelta = FMath::Min(FireSettings->AmmoPerClip - CurrentAmmoInClip, CurrentAmmo - CurrentAmmoInClip);
 
 	if (HasInfiniteClip())
 	{
-		ClipDelta = FireWeaponConfig.AmmoPerClip - CurrentAmmoInClip;
+		ClipDelta = FireSettings->AmmoPerClip - CurrentAmmoInClip;
 	}
 
 	if (ClipDelta > 0)
@@ -225,9 +228,9 @@ bool ATrueFPSFireWeaponBase::CanFire() const
 
 bool ATrueFPSFireWeaponBase::CanReload() const
 {
-	bool bCanReload = (!MyPawn || (MyPawn && MyPawn->Implements<UTrueFPSCharacterInterface>() && ITrueFPSCharacterInterface::Execute_CanReload(MyPawn)));
-	bool bGotAmmo = (CurrentAmmoInClip < FireWeaponConfig.AmmoPerClip) && (CurrentAmmo - CurrentAmmoInClip > 0 || HasInfiniteClip());
-	bool bStateOKToReload = ((CurrentState == EWeaponState::Idle) || (CurrentState == EWeaponState::Firing));
+	const bool bCanReload = (!MyPawn || (MyPawn && MyPawn->Implements<UTrueFPSCharacterInterface>() && ITrueFPSCharacterInterface::Execute_TrueFPSInterface_CanReload(MyPawn)));
+	const bool bGotAmmo = (CurrentAmmoInClip < FireSettings->AmmoPerClip) && (CurrentAmmo - CurrentAmmoInClip > 0 || HasInfiniteClip());
+	const bool bStateOKToReload = ((State.CurrentState == EWeaponState::Idle) || (State.CurrentState == EWeaponState::Firing));
 	return ((bCanReload == true) && (bGotAmmo == true) && (bStateOKToReload == true));	
 }
 
@@ -245,94 +248,91 @@ void ATrueFPSFireWeaponBase::SimulateWeaponFire()
 {
 	Super::SimulateWeaponFire();
 	
-	if (MuzzleFX)
+	if (IsValid(FireSettings->MuzzleFX))
 	{
 		USkeletalMeshComponent* UseWeaponMesh = GetWeaponMesh();
-		if (!bLoopedMuzzleFX || MuzzlePSC == nullptr)
+		if (!FireSettings->bLoopedMuzzleFX || FireState.MuzzlePSC == nullptr)
 		{
 			// Split screen requires we create 2 effects. One that we see and one that the other player sees.
 			if( (MyPawn != nullptr ) && ( MyPawn->IsLocallyControlled() == true ) )
 			{
-				AController* PlayerCon = MyPawn->GetController();				
-				if( PlayerCon != nullptr )
+				if(const AController* PlayerCon = MyPawn->GetController(); PlayerCon != nullptr )
 				{
 					// Mesh1P->GetSocketLocation(MuzzleAttachPoint);
-					MuzzlePSC = UGameplayStatics::SpawnEmitterAttached(MuzzleFX, Mesh1P, MuzzleAttachPoint);
-					MuzzlePSC->bOwnerNoSee = false;
-					MuzzlePSC->bOnlyOwnerSee = true;
+					FireState.MuzzlePSC = UGameplayStatics::SpawnEmitterAttached(FireSettings->MuzzleFX, Mesh1P, FireSettings->MuzzleAttachPoint);
+					FireState.MuzzlePSC->bOwnerNoSee = false;
+					FireState.MuzzlePSC->bOnlyOwnerSee = true;
 
 					// Mesh3P->GetSocketLocation(MuzzleAttachPoint);
-					MuzzlePSCSecondary = UGameplayStatics::SpawnEmitterAttached(MuzzleFX, Mesh3P, MuzzleAttachPoint);
-					MuzzlePSCSecondary->bOwnerNoSee = true;
-					MuzzlePSCSecondary->bOnlyOwnerSee = false;				
+					FireState.MuzzlePSCSecondary = UGameplayStatics::SpawnEmitterAttached(FireSettings->MuzzleFX, Mesh3P, FireSettings->MuzzleAttachPoint);
+					FireState.MuzzlePSCSecondary->bOwnerNoSee = true;
+					FireState.MuzzlePSCSecondary->bOnlyOwnerSee = false;				
 				}				
 			}
 			else
 			{
-				MuzzlePSC = UGameplayStatics::SpawnEmitterAttached(MuzzleFX, UseWeaponMesh, MuzzleAttachPoint);
+				FireState.MuzzlePSC = UGameplayStatics::SpawnEmitterAttached(FireSettings->MuzzleFX, UseWeaponMesh, FireSettings->MuzzleAttachPoint);
 			}
 		}
 	}
 
-	if (NiagaraMuzzleFX.LoadSynchronous())
+	if (IsValid(FireSettings->NiagaraMuzzleFX))
 	{
 		USkeletalMeshComponent* UseWeaponMesh = GetWeaponMesh();
-		if (!bLoopedMuzzleFX || NiagaraMuzzleNC == nullptr)
+		if (!FireSettings->bLoopedMuzzleFX || FireState.NiagaraMuzzleNC == nullptr)
 		{
 			// Split screen requires we create 2 effects. One that we see and one that the other player sees.
 			if( (MyPawn != nullptr ) && ( MyPawn->IsLocallyControlled() == true ) )
 			{
-				AController* PlayerCon = MyPawn->GetController();				
-				if( PlayerCon != nullptr )
+				if(const AController* PlayerCon = MyPawn->GetController(); PlayerCon != nullptr )
 				{
-					NiagaraMuzzleNC = UNiagaraFunctionLibrary::SpawnSystemAttached(NiagaraMuzzleFX.Get(), Mesh1P, MuzzleAttachPoint, FVector(ForceInit), FRotator::ZeroRotator, EAttachLocation::KeepRelativeOffset, true);
-					NiagaraMuzzleNC->bOwnerNoSee = false;
-					NiagaraMuzzleNC->bOnlyOwnerSee = true;
-					NiagaraMuzzleNC->SetNiagaraVariableBool(NiagaraMuzzleTriggerParam.ToString(), true);
+					FireState.NiagaraMuzzleNC = UNiagaraFunctionLibrary::SpawnSystemAttached(FireSettings->NiagaraMuzzleFX, Mesh1P, FireSettings->MuzzleAttachPoint, FVector(ForceInit), FRotator::ZeroRotator, EAttachLocation::KeepRelativeOffset, true);
+					FireState.NiagaraMuzzleNC->bOwnerNoSee = false;
+					FireState.NiagaraMuzzleNC->bOnlyOwnerSee = true;
+					FireState.NiagaraMuzzleNC->SetNiagaraVariableBool(FireSettings->NiagaraMuzzleTriggerParam.ToString(), true);
 
-					NiagaraMuzzleNCSecondary = UNiagaraFunctionLibrary::SpawnSystemAttached(NiagaraMuzzleFX.Get(), Mesh3P, MuzzleAttachPoint, FVector(ForceInit), FRotator::ZeroRotator, EAttachLocation::KeepRelativeOffset, true);
-					NiagaraMuzzleNCSecondary->bOwnerNoSee = true;
-					NiagaraMuzzleNCSecondary->bOnlyOwnerSee = false;
-					NiagaraMuzzleNCSecondary->SetNiagaraVariableBool(NiagaraMuzzleTriggerParam.ToString(), true);
+					FireState.NiagaraMuzzleNCSecondary = UNiagaraFunctionLibrary::SpawnSystemAttached(FireSettings->NiagaraMuzzleFX, Mesh3P, FireSettings->MuzzleAttachPoint, FVector(ForceInit), FRotator::ZeroRotator, EAttachLocation::KeepRelativeOffset, true);
+					FireState.NiagaraMuzzleNCSecondary->bOwnerNoSee = true;
+					FireState.NiagaraMuzzleNCSecondary->bOnlyOwnerSee = false;
+					FireState.NiagaraMuzzleNCSecondary->SetNiagaraVariableBool(FireSettings->NiagaraMuzzleTriggerParam.ToString(), true);
 				}				
 			}
 			else
 			{
-				NiagaraMuzzleNC = UNiagaraFunctionLibrary::SpawnSystemAttached(NiagaraMuzzleFX.Get(), UseWeaponMesh, MuzzleAttachPoint, FVector(ForceInit), FRotator::ZeroRotator, EAttachLocation::KeepRelativeOffset, true);
-				NiagaraMuzzleNC->SetNiagaraVariableBool(NiagaraMuzzleTriggerParam.ToString(), true);
+				FireState.NiagaraMuzzleNC = UNiagaraFunctionLibrary::SpawnSystemAttached(FireSettings->NiagaraMuzzleFX, UseWeaponMesh, FireSettings->MuzzleAttachPoint, FVector(ForceInit), FRotator::ZeroRotator, EAttachLocation::KeepRelativeOffset, true);
+				FireState.NiagaraMuzzleNC->SetNiagaraVariableBool(FireSettings->NiagaraMuzzleTriggerParam.ToString(), true);
 			}
 		}
 	}
 
-	if (NiagaraShellFX.LoadSynchronous() && ShellMesh.LoadSynchronous())
+	if (IsValid(FireSettings->NiagaraShellFX) && IsValid(FireSettings->ShellMesh))
 	{
 		USkeletalMeshComponent* UseWeaponMesh = GetWeaponMesh();
-		if (!bLoopedShellFX || NiagaraShellNC == nullptr)
+		if (!FireSettings->bLoopedShellFX || FireState.NiagaraShellNC == nullptr)
 		{
 			// Split screen requires we create 2 effects. One that we see and one that the other player sees.
 			if( (MyPawn != nullptr ) && ( MyPawn->IsLocallyControlled() == true ) )
 			{
-				AController* PlayerCon = MyPawn->GetController();				
-				if( PlayerCon != nullptr )
+				if(const AController* PlayerCon = MyPawn->GetController(); PlayerCon != nullptr )
 				{
-					NiagaraShellNC = UNiagaraFunctionLibrary::SpawnSystemAttached(NiagaraShellFX.Get(), Mesh1P, NAME_None, Mesh1P->GetSocketTransform(ShellEjectSocketName, RTS_Actor).GetLocation(), FRotator(0.f, 90.f, 0.f), EAttachLocation::KeepRelativeOffset, true);
-					NiagaraShellNC->bOwnerNoSee = false;
-					NiagaraShellNC->bOnlyOwnerSee = true;
-					NiagaraShellNC->SetNiagaraVariableBool(NiagaraShellTriggerParam.ToString(), true);
-					NiagaraShellNC->SetVariableStaticMesh(NiagaraShellMeshParam, ShellMesh.Get());
+					FireState.NiagaraShellNC = UNiagaraFunctionLibrary::SpawnSystemAttached(FireSettings->NiagaraShellFX, Mesh1P, NAME_None, Mesh1P->GetSocketTransform(FireSettings->ShellEjectSocketName, RTS_Actor).GetLocation(), FRotator(0.f, 90.f, 0.f), EAttachLocation::KeepRelativeOffset, true);
+					FireState.NiagaraShellNC->bOwnerNoSee = false;
+					FireState.NiagaraShellNC->bOnlyOwnerSee = true;
+					FireState.NiagaraShellNC->SetNiagaraVariableBool(FireSettings->NiagaraShellTriggerParam.ToString(), true);
+					FireState.NiagaraShellNC->SetVariableStaticMesh(FireSettings->NiagaraShellMeshParam, FireSettings->ShellMesh.Get());
 
-					NiagaraShellNCSecondary = UNiagaraFunctionLibrary::SpawnSystemAttached(NiagaraShellFX.Get(), Mesh3P, NAME_None, Mesh3P->GetSocketTransform(ShellEjectSocketName, RTS_Actor).GetLocation(), FRotator(0.f, 90.f, 0.f), EAttachLocation::KeepRelativeOffset, true);
-					NiagaraShellNCSecondary->bOwnerNoSee = true;
-					NiagaraShellNCSecondary->bOnlyOwnerSee = false;
-					NiagaraShellNCSecondary->SetNiagaraVariableBool(NiagaraShellTriggerParam.ToString(), true);
-					NiagaraShellNCSecondary->SetVariableStaticMesh(NiagaraShellMeshParam, ShellMesh.Get());
+					FireState.NiagaraShellNCSecondary = UNiagaraFunctionLibrary::SpawnSystemAttached(FireSettings->NiagaraShellFX.Get(), Mesh3P, NAME_None, Mesh3P->GetSocketTransform(FireSettings->ShellEjectSocketName, RTS_Actor).GetLocation(), FRotator(0.f, 90.f, 0.f), EAttachLocation::KeepRelativeOffset, true);
+					FireState.NiagaraShellNCSecondary->bOwnerNoSee = true;
+					FireState.NiagaraShellNCSecondary->bOnlyOwnerSee = false;
+					FireState.NiagaraShellNCSecondary->SetNiagaraVariableBool(FireSettings->NiagaraShellTriggerParam.ToString(), true);
+					FireState.NiagaraShellNCSecondary->SetVariableStaticMesh(FireSettings->NiagaraShellMeshParam, FireSettings->ShellMesh.Get());
 				}				
 			}
 			else
 			{
-				NiagaraShellNC = UNiagaraFunctionLibrary::SpawnSystemAttached(NiagaraShellFX.Get(), UseWeaponMesh, NAME_None, UseWeaponMesh->GetSocketTransform(ShellEjectSocketName, RTS_Actor).GetLocation(), FRotator(0.f, 90.f, 0.f), EAttachLocation::KeepRelativeOffset, true);
-				NiagaraShellNC->SetNiagaraVariableBool(NiagaraShellTriggerParam.ToString(), true);
-				NiagaraShellNC->SetVariableStaticMesh(NiagaraShellMeshParam, ShellMesh.Get());
+				FireState.NiagaraShellNC = UNiagaraFunctionLibrary::SpawnSystemAttached(FireSettings->NiagaraShellFX.Get(), UseWeaponMesh, NAME_None, UseWeaponMesh->GetSocketTransform(FireSettings->ShellEjectSocketName, RTS_Actor).GetLocation(), FRotator(0.f, 90.f, 0.f), EAttachLocation::KeepRelativeOffset, true);
+				FireState.NiagaraShellNC->SetNiagaraVariableBool(FireSettings->NiagaraShellTriggerParam.ToString(), true);
+				FireState.NiagaraShellNC->SetVariableStaticMesh(FireSettings->NiagaraShellMeshParam, FireSettings->ShellMesh.Get());
 			}
 		}
 	}
@@ -342,17 +342,17 @@ void ATrueFPSFireWeaponBase::StopSimulatingWeaponFire()
 {
 	Super::StopSimulatingWeaponFire();
 	
-	if (bLoopedMuzzleFX )
+	if (FireSettings && FireSettings->bLoopedMuzzleFX)
 	{
-		if( MuzzlePSC != nullptr)
+		if( FireState.MuzzlePSC.IsValid() )
 		{
-			MuzzlePSC->DeactivateSystem();
-			MuzzlePSC = nullptr;
+			FireState.MuzzlePSC->DeactivateSystem();
+			FireState.MuzzlePSC = nullptr;
 		}
-		if( MuzzlePSCSecondary != nullptr)
+		if( FireState.MuzzlePSCSecondary.IsValid() )
 		{
-			MuzzlePSCSecondary->DeactivateSystem();
-			MuzzlePSCSecondary = nullptr;
+			FireState.MuzzlePSCSecondary->DeactivateSystem();
+			FireState.MuzzlePSCSecondary = nullptr;
 		}
 	}
 }
@@ -372,10 +372,8 @@ void ATrueFPSFireWeaponBase::OnRep_Reload()
 void ATrueFPSFireWeaponBase::ServerHandleFiring_Implementation()
 {
 	Super::ServerHandleFiring_Implementation();
-	
-	const bool bShouldUpdateAmmo = (CurrentAmmoInClip > 0 && CanFire());
 
-	if (bShouldUpdateAmmo)
+	if ((CurrentAmmoInClip > 0 && CanFire()))
 	{
 		// update ammo
 		UseAmmo();
@@ -393,9 +391,9 @@ void ATrueFPSFireWeaponBase::HandleFiring()
 
 		if (MyPawn && MyPawn->IsLocallyControlled())
 		{
-			if (FireWeaponConfig.ShotsByFiring > 1)
+			if (FireSettings->ShotsByFiring > 1)
 			{
-				for (int32 i = 0; i < FireWeaponConfig.ShotsByFiring; i++)
+				for (int32 i = 0; i < FireSettings->ShotsByFiring; i++)
 				{
 					FireWeapon();
 				}
@@ -417,9 +415,9 @@ void ATrueFPSFireWeaponBase::HandleFiring()
 	}
 	else if (MyPawn && MyPawn->IsLocallyControlled())
 	{
-		if (GetCurrentAmmo() == 0 && !bRefiring)
+		if (GetCurrentAmmo() == 0 && !State.bRefiring)
 		{
-			PlayWeaponSound(OutOfAmmoSound);
+			PlayWeaponSound(Settings->OutOfAmmoSound);
 		}
 		
 		// stop weapon fire FX, but stay in Firing state
@@ -448,40 +446,40 @@ void ATrueFPSFireWeaponBase::HandleFiring()
 		}
 
 		// setup refire timer
-		bRefiring = (CurrentState == EWeaponState::Firing && WeaponConfig.TimeBetweenShots > 0.0f);
-		if (bRefiring)
+		State.bRefiring = (State.CurrentState == EWeaponState::Firing && Settings->TimeBetweenShots > 0.0f);
+		if (State.bRefiring)
 		{
-			GetWorldTimerManager().SetTimer(TimerHandle_HandleFiring, this, &ThisClass::HandleReFiring, FMath::Max<float>(WeaponConfig.TimeBetweenShots + TimerIntervalAdjustment, SMALL_NUMBER), false);
-			TimerIntervalAdjustment = 0.f;
+			GetWorldTimerManager().SetTimer(State.TimerHandle_HandleFiring, this, &ThisClass::HandleReFiring, FMath::Max<float>(Settings->TimeBetweenShots + State.TimerIntervalAdjustment, SMALL_NUMBER), false);
+			State.TimerIntervalAdjustment = 0.f;
 		}
 	}
 
-	LastFireTime = GetWorld()->GetTimeSeconds();
+	State.LastFireTime = GetWorld()->GetTimeSeconds();
 }
 
 void ATrueFPSFireWeaponBase::DetermineWeaponState()
 {
 	EWeaponState::Type NewState = EWeaponState::Idle;
 
-	if (bIsEquipped)
+	if (State.bIsEquipped)
 	{
 		if( bPendingReload  )
 		{
 			if( CanReload() == false )
 			{
-				NewState = CurrentState;
+				NewState = State.CurrentState;
 			}
 			else
 			{
 				NewState = EWeaponState::Reloading;
 			}
 		}		
-		else if ( (bPendingReload == false ) && ( bWantsToFire == true ) && ( CanFire() == true ))
+		else if ( (bPendingReload == false ) && ( State.bWantsToFire == true ) && ( CanFire() == true ))
 		{
 			NewState = EWeaponState::Firing;
 		}
 	}
-	else if (bPendingEquip)
+	else if (State.bPendingEquip)
 	{
 		NewState = EWeaponState::Equipping;
 	}
@@ -500,14 +498,14 @@ FVector ATrueFPSFireWeaponBase::GetAdjustedAim() const
 
 FVector ATrueFPSFireWeaponBase::GetMuzzleLocation() const
 {
-	USkeletalMeshComponent* UseMesh = GetWeaponMesh();
-	return UseMesh->GetSocketLocation(MuzzleAttachPoint);
+	const USkeletalMeshComponent* UseMesh = GetWeaponMesh();
+	return UseMesh->GetSocketLocation(FireSettings->MuzzleAttachPoint);
 }
 
 FVector ATrueFPSFireWeaponBase::GetMuzzleDirection() const
 {
-	USkeletalMeshComponent* UseMesh = GetWeaponMesh();
-	return UseMesh->GetSocketRotation(MuzzleAttachPoint).Vector();
+	const USkeletalMeshComponent* UseMesh = GetWeaponMesh();
+	return UseMesh->GetSocketRotation(FireSettings->MuzzleAttachPoint).Vector();
 }
 
 FHitResult ATrueFPSFireWeaponBase::WeaponTrace(const FVector& StartTrace, const FVector& EndTrace) const
@@ -524,8 +522,8 @@ FHitResult ATrueFPSFireWeaponBase::WeaponTrace(const FVector& StartTrace, const 
 
 FVector ATrueFPSFireWeaponBase::GetCameraDamageStartLocation(const FVector& AimDir) const
 {
-	ATrueFPSPlayerController* PC = MyPawn ? Cast<ATrueFPSPlayerController>(MyPawn->Controller) : NULL;
-	ATrueFPSAIController* AIPC = MyPawn ? Cast<ATrueFPSAIController>(MyPawn->Controller) : NULL;
+	const ATrueFPSPlayerController* PC = MyPawn ? Cast<ATrueFPSPlayerController>(MyPawn->Controller) : nullptr;
+	const ATrueFPSAIController* AIPC = MyPawn ? Cast<ATrueFPSAIController>(MyPawn->Controller) : nullptr;
 	FVector OutStartTrace = FVector::ZeroVector;
 
 	if (PC)

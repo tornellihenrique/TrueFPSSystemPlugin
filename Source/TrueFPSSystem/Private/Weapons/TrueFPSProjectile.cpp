@@ -57,7 +57,7 @@ void ATrueFPSProjectile::PostInitializeComponents()
 		OwnerWeapon->ApplyWeaponConfig(WeaponConfig);
 	}
 
-	SetLifeSpan( WeaponConfig.ProjectileLife );
+	SetLifeSpan( WeaponConfig->ProjectileLife );
 	MyController = GetInstigatorController();
 }
 
@@ -108,16 +108,15 @@ void ATrueFPSProjectile::Explode(const FHitResult& Impact)
 	// effects and damage origin shouldn't be placed inside mesh at impact point
 	const FVector NudgedImpactLocation = Impact.ImpactPoint + Impact.ImpactNormal * 10.0f;
 
-	if (WeaponConfig.ExplosionDamage > 0 && WeaponConfig.ExplosionRadius > 0 && WeaponConfig.DamageType)
+	if (WeaponConfig->ExplosionDamage > 0 && WeaponConfig->ExplosionRadius > 0 && WeaponConfig->DamageType)
 	{
-		UGameplayStatics::ApplyRadialDamage(this, WeaponConfig.ExplosionDamage, NudgedImpactLocation, WeaponConfig.ExplosionRadius, WeaponConfig.DamageType, TArray<AActor*>(), this, MyController.Get());
+		UGameplayStatics::ApplyRadialDamage(this, WeaponConfig->ExplosionDamage, NudgedImpactLocation, WeaponConfig->ExplosionRadius, WeaponConfig->DamageType, TArray<AActor*>(), this, MyController.Get());
 	}
 
 	if (ExplosionTemplate)
 	{
 		FTransform const SpawnTransform(Impact.ImpactNormal.Rotation(), NudgedImpactLocation);
-		ATrueFPSExplosionEffect* const EffectActor = GetWorld()->SpawnActorDeferred<ATrueFPSExplosionEffect>(ExplosionTemplate, SpawnTransform);
-		if (EffectActor)
+		if (ATrueFPSExplosionEffect* const EffectActor = GetWorld()->SpawnActorDeferred<ATrueFPSExplosionEffect>(ExplosionTemplate, SpawnTransform))
 		{
 			EffectActor->SurfaceHit = Impact;
 			UGameplayStatics::FinishSpawningActor(EffectActor, SpawnTransform);

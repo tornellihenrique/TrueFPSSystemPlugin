@@ -4,43 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Weapons/TrueFPSFireWeaponBase.h"
+#include "Settings/TrueFPSFireWeaponProjectileSettings.h"
 #include "TrueFPSFireWeaponProjectile.generated.h"
-
-USTRUCT(DisplayName = "Weapon Projectile")
-struct FProjectileWeaponData
-{
-	GENERATED_USTRUCT_BODY()
-
-	/** projectile class */
-	UPROPERTY(EditDefaultsOnly, Category=Projectile)
-	TSubclassOf<class ATrueFPSProjectile> ProjectileClass;
-
-	/** life time */
-	UPROPERTY(EditDefaultsOnly, Category=Projectile)
-	float ProjectileLife;
-
-	/** damage at impact point */
-	UPROPERTY(EditDefaultsOnly, Category=WeaponStat)
-	int32 ExplosionDamage;
-
-	/** radius of damage */
-	UPROPERTY(EditDefaultsOnly, Category=WeaponStat)
-	float ExplosionRadius;
-
-	/** type of damage */
-	UPROPERTY(EditDefaultsOnly, Category=WeaponStat)
-	TSubclassOf<UDamageType> DamageType;
-
-	/** defaults */
-	FProjectileWeaponData()
-	{
-		ProjectileClass = nullptr;
-		ProjectileLife = 10.0f;
-		ExplosionDamage = 100;
-		ExplosionRadius = 300.0f;
-		DamageType = UDamageType::StaticClass();
-	}
-};
 
 /**
  * 
@@ -50,12 +15,17 @@ class TRUEFPSSYSTEM_API ATrueFPSFireWeaponProjectile : public ATrueFPSFireWeapon
 {
 	GENERATED_BODY()
 
+protected:
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings|TrueFPS Fire Weapon Instant")
+	TObjectPtr<UTrueFPSFireWeaponProjectileSettings> FireProjectileSettings;
+
 public:
 
 	ATrueFPSFireWeaponProjectile(const FObjectInitializer& ObjectInitializer);
 
 	/** apply config on projectile */
-	void ApplyWeaponConfig(FProjectileWeaponData& Data);
+	void ApplyWeaponConfig(UTrueFPSFireWeaponProjectileSettings* Data);
 
 protected:
 
@@ -63,10 +33,6 @@ protected:
 	{
 		return EAmmoType::ERocket;
 	}
-
-	/** weapon config */
-	UPROPERTY(EditDefaultsOnly, Category="Config", meta = (DisplayAfter = "WeaponConfig"))
-	FProjectileWeaponData ProjectileConfig;
 
 	//////////////////////////////////////////////////////////////////////////
 	// Weapon usage
