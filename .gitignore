@@ -77,9 +77,6 @@ Saved/*
 Intermediate/*
 Plugins/*/Intermediate/*
 
-# We don't need to versionate Content folder
-Content/*
-
 # Cache files for the editor to use
 DerivedDataCache/*
 

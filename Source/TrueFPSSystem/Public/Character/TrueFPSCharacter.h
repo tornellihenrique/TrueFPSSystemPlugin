@@ -584,5 +584,6 @@ inline bool ATrueFPSCharacter::TrueFPSInterface_CanReload_Implementation() const
 
 inline float ATrueFPSCharacter::TrueFPSInterface_GetAimingInterpSpeed_Implementation() const
 {
+	if (!Settings) return 10.f;
 	return Settings->AimingInterpSpeed;
 }
