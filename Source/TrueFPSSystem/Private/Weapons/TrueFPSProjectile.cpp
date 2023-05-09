@@ -57,7 +57,11 @@ void ATrueFPSProjectile::PostInitializeComponents()
 		OwnerWeapon->ApplyWeaponConfig(WeaponConfig);
 	}
 
-	SetLifeSpan( WeaponConfig->ProjectileLife );
+	if (WeaponConfig)
+	{
+		SetLifeSpan(WeaponConfig->ProjectileLife);
+	}
+	
 	MyController = GetInstigatorController();
 }
 
