@@ -54,7 +54,7 @@ void ATrueFPSProjectile::PostInitializeComponents()
 	ATrueFPSFireWeaponProjectile* OwnerWeapon = Cast<ATrueFPSFireWeaponProjectile>(GetOwner());
 	if (OwnerWeapon)
 	{
-		OwnerWeapon->ApplyWeaponConfig(WeaponConfig);
+		WeaponConfig = OwnerWeapon->GetWeaponConfig();
 	}
 
 	if (WeaponConfig)

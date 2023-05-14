@@ -10,11 +10,6 @@ ATrueFPSFireWeaponProjectile::ATrueFPSFireWeaponProjectile(const FObjectInitiali
 {
 }
 
-void ATrueFPSFireWeaponProjectile::ApplyWeaponConfig(UTrueFPSFireWeaponProjectileSettings* Data)
-{
-	Data = FireProjectileSettings;
-}
-
 void ATrueFPSFireWeaponProjectile::FireWeapon()
 {
 	FVector ShootDir = GetAdjustedAim();

@@ -18,14 +18,14 @@ class TRUEFPSSYSTEM_API ATrueFPSFireWeaponProjectile : public ATrueFPSFireWeapon
 protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings|TrueFPS Fire Weapon Instant")
-	TObjectPtr<UTrueFPSFireWeaponProjectileSettings> FireProjectileSettings;
+	UTrueFPSFireWeaponProjectileSettings* FireProjectileSettings;
 
 public:
 
 	ATrueFPSFireWeaponProjectile(const FObjectInitializer& ObjectInitializer);
 
 	/** apply config on projectile */
-	void ApplyWeaponConfig(UTrueFPSFireWeaponProjectileSettings* Data);
+	UTrueFPSFireWeaponProjectileSettings* GetWeaponConfig() const;
 
 protected:
 
@@ -45,3 +45,8 @@ protected:
 	void ServerFireProjectile(FVector Origin, FVector_NetQuantizeNormal ShootDir);
 	
 };
+
+inline UTrueFPSFireWeaponProjectileSettings* ATrueFPSFireWeaponProjectile::GetWeaponConfig() const
+{
+	return FireProjectileSettings;
+}

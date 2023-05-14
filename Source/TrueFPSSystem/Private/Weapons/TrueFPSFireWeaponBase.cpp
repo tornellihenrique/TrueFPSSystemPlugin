@@ -510,11 +510,15 @@ FVector ATrueFPSFireWeaponBase::GetMuzzleDirection() const
 
 FHitResult ATrueFPSFireWeaponBase::WeaponTrace(const FVector& StartTrace, const FVector& EndTrace) const
 {
+	FName WeaponTraceTag{"WeaponTraceTag"};
+	
 	// Perform trace to retrieve hit info
 	FCollisionQueryParams TraceParams(SCENE_QUERY_STAT(WeaponTrace), true, GetInstigator());
 	TraceParams.bReturnPhysicalMaterial = true;
+	TraceParams.TraceTag = WeaponTraceTag;
 
 	FHitResult Hit(ForceInit);
+	GetWorld()->DebugDrawTraceTag = WeaponTraceTag;
 	GetWorld()->LineTraceSingleByChannel(Hit, StartTrace, EndTrace, COLLISION_WEAPON, TraceParams);
 
 	return Hit;
