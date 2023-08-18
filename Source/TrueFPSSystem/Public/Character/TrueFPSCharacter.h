@@ -148,13 +148,13 @@ public:
 	*/
 	bool IsEnemyFor(AController* TestPC) const;
 
-	UFUNCTION(BlueprintPure)
+	UFUNCTION(BlueprintPure, Category = "TrueFPS")
 	FORCEINLINE USkeletalMeshComponent* GetClientMesh() const { return ClientMesh; }
 
-	UFUNCTION(BlueprintPure)
+	UFUNCTION(BlueprintPure, Category = "TrueFPS")
 	FORCEINLINE float GetHealth() const { return Health; }
 
-	UFUNCTION(BlueprintPure)
+	UFUNCTION(BlueprintPure, Category = "TrueFPS")
 	FORCEINLINE bool GetIsDying() const { return State.bIsDying; }
 	
 protected:

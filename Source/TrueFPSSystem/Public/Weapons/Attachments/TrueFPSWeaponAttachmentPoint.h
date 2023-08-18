@@ -58,7 +58,7 @@ public:
 	template<typename T>
 	FORCEINLINE T* GetAttachment() const { return Cast<T>(Attachment); }
 
-	UFUNCTION(BlueprintPure)
+	UFUNCTION(BlueprintPure, Category = "TrueFPS")
 	FORCEINLINE bool HasAuthority() const { return GetOwner()->HasAuthority(); }
 
 	// Spawns and sets attachment reference. Returns null if attachment is already set or if parameters are invalid.

@@ -225,16 +225,16 @@ struct FRecoilParams
 
 	FORCEINLINE bool IsValid() const { return LocationCurve != nullptr; }
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "TrueFPS")
 	class UCurveVector* LocationCurve = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "TrueFPS")
 	class UCurveVector* RotationCurve = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "TrueFPS")
 	float PlayRate = 1.f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "TrueFPS")
 	float Magnitude = 1.f;
 };
 

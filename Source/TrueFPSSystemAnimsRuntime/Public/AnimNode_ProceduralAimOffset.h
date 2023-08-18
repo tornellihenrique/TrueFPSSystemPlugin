@@ -16,10 +16,10 @@ struct TRUEFPSSYSTEMANIMSRUNTIME_API FBoneParams
 	FBoneParams(const FBoneReference& Bone, const float Weight)
 		: Bone(Bone), Weight(Weight) {}
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "TrueFPS")
 	FBoneReference Bone;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "TrueFPS")
 	float Weight = 1.f;
 };
 

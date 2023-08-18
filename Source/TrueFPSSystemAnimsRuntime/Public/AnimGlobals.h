@@ -18,11 +18,11 @@ struct FArmPullbackConfig
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, Meta = (DisplayName = "Arm Pull-Back Configuration"))
+	UPROPERTY(EditAnywhere, Meta = (DisplayName = "Arm Pull-Back Configuration"), Category = "TrueFPS")
 	EArmPullbackConfig Config = EArmPullbackConfig::AimingValue;
 
 	// The aiming value that, when exceeded, will disable arm pull-back.
-	UPROPERTY(EditAnywhere, Meta = (EditCondition = "Config == EArmPullbackConfig::AimingValue", DisplayName = "Arm Pull-Back Disabled Threshold", ClampMin = "0", ClampMax = "1"))
+	UPROPERTY(EditAnywhere, Meta = (EditCondition = "Config == EArmPullbackConfig::AimingValue", DisplayName = "Arm Pull-Back Disabled Threshold", ClampMin = "0", ClampMax = "1"), Category = "TrueFPS")
 	float ArmPullbackThreshold = 0.1f;
 };
 
@@ -31,10 +31,10 @@ struct FJointClampConfig
 {
 	GENERATED_BODY()
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (DisplayName = "Joint Horizontal Clamp Range"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (DisplayName = "Joint Horizontal Clamp Range"), Category = "TrueFPS")
 	FFloatRange HorizontalRange;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (DisplayName = "Joint Vertical Clamp Range"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Meta = (DisplayName = "Joint Vertical Clamp Range"), Category = "TrueFPS")
 	FFloatRange VerticalRange;
 
 	FORCEINLINE bool IsClamping() const

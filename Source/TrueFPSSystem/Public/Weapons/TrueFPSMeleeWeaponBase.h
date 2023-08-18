@@ -26,11 +26,11 @@ struct FMeleeWeaponData
 	GENERATED_USTRUCT_BODY()
 	
 	/** name of bone/socket for weapon tracing */
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "TrueFPS")
 	FName WeaponTracePoint;
 	
 	/** radius for weapon tracing */
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "TrueFPS")
 	float WeaponTraceRadius;
 
 	/** damage amount */
