@@ -18,7 +18,7 @@ public class TrueFPSSystemLoadingScreen : ModuleRules
             {
                 "Core",
                 "CoreUObject",
-                "MoviePlayer",
+                //"MoviePlayer",
                 "Slate",
                 "SlateCore",
                 "InputCore"
