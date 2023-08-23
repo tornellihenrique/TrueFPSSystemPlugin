@@ -1,6 +1,5 @@
 ﻿
 #include "TrueFPSSystemLoadingScreen.h"
-#include "MoviePlayer.h"
 #include "Widgets/Images/SThrobber.h"
 #include "Widgets/Layout/SSafeZone.h"
 
@@ -100,11 +99,11 @@ public:
 
 	virtual void StartInGameLoadingScreen() override
 	{
-		FLoadingScreenAttributes LoadingScreen;
-		LoadingScreen.bAutoCompleteWhenLoadingCompletes = true;
-		LoadingScreen.WidgetLoadingScreen = SNew(STrueFPSLoadingScreen2);
+		//FLoadingScreenAttributes LoadingScreen;
+		//LoadingScreen.bAutoCompleteWhenLoadingCompletes = true;
+		//LoadingScreen.WidgetLoadingScreen = SNew(STrueFPSLoadingScreen2);
 
-		GetMoviePlayer()->SetupLoadingScreen(LoadingScreen);
+		//GetMoviePlayer()->SetupLoadingScreen(LoadingScreen);
 	}
 };
     
