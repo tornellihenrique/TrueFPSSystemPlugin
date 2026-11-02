@@ -5,7 +5,6 @@ Replicated first-person shooter plugin for Unreal Engine 5, in C++. It uses true
 This project's public demo led to my hiring at Nevith Games.
 
 - [Watch the demo](https://www.youtube.com/watch?v=WImIDwkdnes)
-- [Read the docs](https://tornelli-henrique.gitbook.io/truefps-plugin-documentation/)
 - [See the project page](https://tornellihenrique.github.io/work/true-fps-system/)
 
 ## What's inside
